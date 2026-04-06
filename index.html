@@ -1017,10 +1017,17 @@ ${norm}`;
 
   try {
     document.getElementById('imp-msg').textContent='Extracting tasks and summary…';
-    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2000,messages:[{role:'user',content:prompt}]})});
+    let parsed;
+    if (!SCRIPT_URL) throw new Error('No Apps Script URL set. Go to Settings and connect your Google Sheet first.');
+    const resp=await fetch(SCRIPT_URL, {
+      method:'POST',
+      headers:{'Content-Type':'text/plain'},
+      body:JSON.stringify({action:'aiAnalyse',prompt:prompt})
+    });
     const data=await resp.json();
-    const text=data.content.map(c=>c.text||'').join('');
-    const parsed=JSON.parse(text.replace(/```json|```/g,'').trim());
+    if(data.error) throw new Error(data.error);
+    const text=data.result||'';
+    parsed=JSON.parse(text.replace(/```json|```/g,'').trim());
     document.getElementById('imp-msg').textContent='Saving to database…';
 
     const title=document.getElementById('imp-title').value.trim()||(parsed.suggestedDept+' Meeting');
