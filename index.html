@@ -190,8 +190,11 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .src-manual{background:#f5f4f0;color:#4a4840;border-color:#b4b0a8;}
 
 /* ── MEETING CARDS ── */
-.meeting-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 12px; overflow: hidden; }
-.meeting-card-header { padding: 14px 18px; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--border); }
+.meeting-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 10px; overflow: hidden; transition: box-shadow .15s; }
+.meeting-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+.meeting-card-header { padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer; user-select: none; }
+.meeting-card-header:hover { background: var(--surface2); }
+.meeting-card.open .meeting-card-header { border-bottom: 1px solid var(--border); }
 .meeting-title-text { font-size: 14px; font-weight: 600; margin-bottom: 5px; }
 .meeting-meta-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .meeting-card-body { padding: 14px 18px; }
@@ -201,6 +204,13 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .kp-item { font-size: 12px; color: var(--text2); padding: 4px 0; border-bottom: 1px solid var(--border); line-height: 1.5; }
 .kp-item:last-child { border-bottom: none; }
 .meeting-progress { font-size: 12px; color: var(--text3); text-align: right; flex-shrink: 0; }
+.mtg-chevron { width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; color: var(--text3); flex-shrink: 0; transition: transform .2s; }
+.meeting-card.open .mtg-chevron { transform: rotate(180deg); }
+.mtg-pending-badge { display: inline-flex; align-items: center; font-size: 11px; padding: 2px 9px; border-radius: 999px; background: var(--red-bg); color: var(--red); font-weight: 500; white-space: nowrap; }
+.mtg-complete-badge { display: inline-flex; align-items: center; font-size: 11px; padding: 2px 9px; border-radius: 999px; background: var(--green-bg); color: var(--green); font-weight: 500; white-space: nowrap; }
+.mtg-task-summary { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.meeting-card-body { display: none; padding: 14px 18px; }
+.meeting-card.open .meeting-card-body { display: block; }
 .prog-bar-wrap { background: var(--surface2); border-radius: 2px; height: 4px; width: 80px; margin-top: 6px; overflow: hidden; }
 .prog-bar-fill { height: 100%; background: var(--green); border-radius: 2px; transition: width .3s; }
 
@@ -905,26 +915,35 @@ function renderMeetingList(q) {
   wrap.innerHTML = meetings.map(m => {
     const mt=db.tasks.filter(t=>t.meetingId===m.id);
     const done=mt.filter(t=>t.status==='complete').length;
+    const pending=mt.filter(t=>t.status!=='complete').length;
     const pct=mt.length?Math.round(done/mt.length*100):0;
     const kpsHtml=m.keyPoints&&m.keyPoints.length?`<div class="kp-list"><div class="kp-label">Key points</div>${m.keyPoints.map(k=>`<div class="kp-item">— ${k}</div>`).join('')}</div>`:'';
-    return `<div class="meeting-card">
-      <div class="meeting-card-header">
-        <div>
+    const taskSummary = mt.length ? `
+      <div class="mtg-task-summary">
+        ${pending>0?`<span class="mtg-pending-badge">${done}/${mt.length} done</span>`:`<span class="mtg-complete-badge">All ${mt.length} done</span>`}
+      </div>` : '';
+    const chevron = `<div class="mtg-chevron"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6l4 4 4-4"/></svg></div>`;
+    return `<div class="meeting-card" id="mc-${m.id}">
+      <div class="meeting-card-header" onclick="toggleMeeting('${m.id}')">
+        <div style="flex:1;min-width:0;">
           <div class="meeting-title-text">${m.title}</div>
-          <div class="meeting-meta-row">${m.date}${srcPill(m.source)}${deptPill(m.dept)}</div>
+          <div class="meeting-meta-row" style="margin-top:4px;">${m.date}${srcPill(m.source)}${deptPill(m.dept)}</div>
         </div>
-        <div class="meeting-progress">
-          <div>${done}/${mt.length} done</div>
-          <div class="prog-bar-wrap"><div class="prog-bar-fill" style="width:${pct}%"></div></div>
-        </div>
+        ${taskSummary}
+        ${chevron}
       </div>
       <div class="meeting-card-body">
         ${m.summary?`<div class="meeting-summary">${m.summary}</div>`:''}
         ${kpsHtml}
-        ${mt.length?`<div class="section-head" style="margin-top:4px;">Tasks (${mt.length})</div><div class="task-list">${mt.map(t=>taskCardHtml(t,true)).join('')}</div>`:''}
+        ${mt.length?`<div class="section-head" style="margin-top:4px;">Tasks (${mt.length})</div><div class="task-list">${mt.map(t=>taskCardHtml(t,true)).join('')}</div>`:'<div style="font-size:13px;color:var(--text3);padding:4px 0;">No tasks recorded for this meeting.</div>'}
       </div>
     </div>`;
   }).join('');
+}
+
+function toggleMeeting(id) {
+  const card = document.getElementById('mc-'+id);
+  if (card) card.classList.toggle('open');
 }
 
 /* ── IMPORT ── */
