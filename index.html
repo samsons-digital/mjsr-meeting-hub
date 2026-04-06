@@ -183,6 +183,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .d-Sales{background:#edf3fc;color:#1a5fa8;border-color:#7aabdf;}
 .d-Admin{background:#f5f4f0;color:#4a4840;border-color:#b4b0a8;}
 .d-Technical{background:#fdf0ef;color:#9a2c20;border-color:#e8887e;}
+.d-Marketing{background:#fbeaf0;color:#72243e;border-color:#ed93b1;}
 .d-Management{background:#edf7f0;color:#1a6640;border-color:#5ab87a;}
 .d-Other{background:#f5f4f0;color:#4a4840;border-color:#b4b0a8;}
 .src-samsung{background:#edf3fc;color:#1a5fa8;border-color:#7aabdf;}
@@ -197,7 +198,6 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .meeting-card.open .meeting-card-header { border-bottom: 1px solid var(--border); }
 .meeting-title-text { font-size: 14px; font-weight: 600; margin-bottom: 5px; }
 .meeting-meta-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.meeting-card-body { padding: 14px 18px; }
 .meeting-summary { font-size: 13px; color: var(--text2); line-height: 1.6; margin-bottom: 12px; background: var(--surface2); padding: 10px 12px; border-radius: var(--radius-sm); }
 .kp-list { margin-bottom: 12px; }
 .kp-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--text3); margin-bottom: 6px; }
@@ -209,8 +209,8 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .mtg-pending-badge { display: inline-flex; align-items: center; font-size: 11px; padding: 2px 9px; border-radius: 999px; background: var(--red-bg); color: var(--red); font-weight: 500; white-space: nowrap; }
 .mtg-complete-badge { display: inline-flex; align-items: center; font-size: 11px; padding: 2px 9px; border-radius: 999px; background: var(--green-bg); color: var(--green); font-weight: 500; white-space: nowrap; }
 .mtg-task-summary { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
-.meeting-card-body { display: none; padding: 14px 18px; }
-.meeting-card.open .meeting-card-body { display: block; }
+.meeting-card-body { padding: 0; max-height: 0; overflow: hidden; transition: max-height .25s ease, padding .25s ease; }
+.meeting-card.open .meeting-card-body { padding: 14px 18px; max-height: 9999px; }
 .prog-bar-wrap { background: var(--surface2); border-radius: 2px; height: 4px; width: 80px; margin-top: 6px; overflow: hidden; }
 .prog-bar-fill { height: 100%; background: var(--green); border-radius: 2px; transition: width .3s; }
 
@@ -472,8 +472,8 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 </div>
 
 <script>
-const DEPTS = ['Operations','Finance','HR','Sales','Admin','Technical','Management','Other'];
-const DEPT_CLASS = {Operations:'d-Operations',Finance:'d-Finance',HR:'d-HR',Sales:'d-Sales',Admin:'d-Admin',Technical:'d-Technical',Management:'d-Management',Other:'d-Other'};
+const DEPTS = ['Operations','Finance','HR','Sales','Marketing','Admin','Technical','Management','Other'];
+const DEPT_CLASS = {Operations:'d-Operations',Finance:'d-Finance',HR:'d-HR',Sales:'d-Sales',Admin:'d-Admin',Technical:'d-Technical',Marketing:'d-Marketing',Management:'d-Management',Other:'d-Other'};
 const AV_COLORS = ['av-0','av-1','av-2','av-3','av-4','av-5'];
 const TODAY = new Date(); TODAY.setHours(0,0,0,0);
 let db = { meetings:[], tasks:[], aliases:[] };
@@ -912,30 +912,32 @@ function renderMeetingList(q) {
   const wrap = document.getElementById('meeting-list-wrap');
   if (!wrap) return;
   if (!meetings.length) { wrap.innerHTML='<div class="empty-state"><div class="empty-icon">📋</div><div>No meetings yet. Import one to get started.</div></div>'; return; }
-  wrap.innerHTML = meetings.map(m => {
+  wrap.innerHTML = meetings.map((m, idx) => {
     const mt=db.tasks.filter(t=>t.meetingId===m.id);
     const done=mt.filter(t=>t.status==='complete').length;
     const pending=mt.filter(t=>t.status!=='complete').length;
-    const pct=mt.length?Math.round(done/mt.length*100):0;
+    const openByDefault = idx === 0 ? ' open' : '';
     const kpsHtml=m.keyPoints&&m.keyPoints.length?`<div class="kp-list"><div class="kp-label">Key points</div>${m.keyPoints.map(k=>`<div class="kp-item">— ${k}</div>`).join('')}</div>`:'';
-    const taskSummary = mt.length ? `
-      <div class="mtg-task-summary">
-        ${pending>0?`<span class="mtg-pending-badge">${done}/${mt.length} done</span>`:`<span class="mtg-complete-badge">All ${mt.length} done</span>`}
-      </div>` : '';
+    const pendingLabel = pending > 0
+      ? `<span class="mtg-pending-badge">${pending} remaining &nbsp;·&nbsp; ${done}/${mt.length} done</span>`
+      : mt.length > 0 ? `<span class="mtg-complete-badge">All ${mt.length} complete</span>` : '';
     const chevron = `<div class="mtg-chevron"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6l4 4 4-4"/></svg></div>`;
-    return `<div class="meeting-card" id="mc-${m.id}">
+    return `<div class="meeting-card${openByDefault}" id="mc-${m.id}">
       <div class="meeting-card-header" onclick="toggleMeeting('${m.id}')">
         <div style="flex:1;min-width:0;">
           <div class="meeting-title-text">${m.title}</div>
           <div class="meeting-meta-row" style="margin-top:4px;">${m.date}${srcPill(m.source)}${deptPill(m.dept)}</div>
         </div>
-        ${taskSummary}
+        <div class="mtg-task-summary">${pendingLabel}</div>
         ${chevron}
       </div>
       <div class="meeting-card-body">
         ${m.summary?`<div class="meeting-summary">${m.summary}</div>`:''}
         ${kpsHtml}
-        ${mt.length?`<div class="section-head" style="margin-top:4px;">Tasks (${mt.length})</div><div class="task-list">${mt.map(t=>taskCardHtml(t,true)).join('')}</div>`:'<div style="font-size:13px;color:var(--text3);padding:4px 0;">No tasks recorded for this meeting.</div>'}
+        ${mt.length
+          ? `<div class="section-head" style="margin-top:4px;">Tasks (${mt.length})</div><div class="task-list">${mt.map(t=>taskCardHtml(t,true)).join('')}</div>`
+          : '<div style="font-size:13px;color:var(--text3);padding:4px 0;">No tasks recorded for this meeting.</div>'
+        }
       </div>
     </div>`;
   }).join('');
@@ -1016,12 +1018,12 @@ Return ONLY valid JSON with this exact structure (no markdown, no extra text):
 {
   "summary": "2-4 sentence plain English summary of what was discussed and decided",
   "keyPoints": ["up to 5 key decisions or points"],
-  "suggestedDept": "one of: Operations, Finance, HR, Sales, Admin, Technical, Management, Other",
+  "suggestedDept": "one of: Operations, Finance, HR, Sales, Marketing, Admin, Technical, Management, Other",
   "tasks": [
     {
       "text": "specific actionable task description",
       "assignee": "first name only, or empty string",
-      "department": "one of: Operations, Finance, HR, Sales, Admin, Technical, Management, Other",
+      "department": "one of: Operations, Finance, HR, Sales, Marketing, Admin, Technical, Management, Other",
       "due": "YYYY-MM-DD only if explicitly stated, else empty string",
       "priority": "high, medium, or low",
       "notes": "any important context or caveat for this task, or empty string"
