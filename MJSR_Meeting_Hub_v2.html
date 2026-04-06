@@ -1,0 +1,1301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MJSR Meeting Intelligence Hub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f7f5f0;
+  --surface: #ffffff;
+  --surface2: #f0ede6;
+  --border: #e2ddd4;
+  --border2: #cdc8bc;
+  --text: #1a1814;
+  --text2: #6b6560;
+  --text3: #9c9690;
+  --gold: #b8922e;
+  --gold-light: #f5edda;
+  --gold-mid: #e8d5a0;
+  --red: #c0392b; --red-bg: #fdf0ef;
+  --green: #1a7a4a; --green-bg: #edf7f2;
+  --amber: #b07d1a; --amber-bg: #fdf6e3;
+  --blue: #1a5fa8; --blue-bg: #edf3fc;
+  --purple: #5a3e9e; --purple-bg: #f2effe;
+  --teal: #0f7a6a; --teal-bg: #e8f7f5;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --shadow: 0 1px 3px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.04);
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.05);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 14px; }
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+/* ── SHELL ── */
+.app { display: flex; min-height: 100vh; }
+
+/* ── SIDEBAR ── */
+.sidebar {
+  width: 220px; flex-shrink: 0; background: var(--text);
+  display: flex; flex-direction: column;
+  position: fixed; top: 0; left: 0; bottom: 0; z-index: 100;
+}
+.sidebar-brand {
+  padding: 24px 20px 20px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+.brand-name {
+  font-family: 'DM Serif Display', serif;
+  font-size: 18px; color: #fff; letter-spacing: .01em; line-height: 1.2;
+}
+.brand-sub { font-size: 11px; color: rgba(255,255,255,.4); margin-top: 3px; letter-spacing: .08em; text-transform: uppercase; }
+.sidebar-nav { flex: 1; padding: 12px 0; overflow-y: auto; }
+.nav-section-label { font-size: 10px; color: rgba(255,255,255,.3); text-transform: uppercase; letter-spacing: .1em; padding: 14px 20px 4px; }
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 20px; font-size: 13px; color: rgba(255,255,255,.6);
+  cursor: pointer; transition: all .15s; border: none; background: none; width: 100%; text-align: left;
+  border-left: 2px solid transparent;
+}
+.nav-item:hover { color: #fff; background: rgba(255,255,255,.05); }
+.nav-item.active { color: #fff; background: rgba(255,255,255,.08); border-left-color: var(--gold); }
+.nav-icon { width: 16px; height: 16px; flex-shrink: 0; opacity: .7; }
+.nav-item.active .nav-icon, .nav-item:hover .nav-icon { opacity: 1; }
+.sidebar-footer { padding: 16px 20px; border-top: 1px solid rgba(255,255,255,.08); }
+.storage-badge {
+  font-size: 11px; color: rgba(255,255,255,.4);
+  display: flex; align-items: center; gap: 6px;
+}
+.storage-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
+
+/* ── MAIN ── */
+.main { margin-left: 220px; flex: 1; display: flex; flex-direction: column; min-height: 100vh; }
+.topbar {
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 14px 32px; display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 50;
+}
+.page-title { font-size: 16px; font-weight: 600; }
+.topbar-actions { display: flex; align-items: center; gap: 10px; }
+.content { padding: 28px 32px; flex: 1; }
+
+/* ── BUTTONS ── */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 16px; font-size: 13px; font-family: inherit;
+  border: 1px solid var(--border2); border-radius: var(--radius-sm);
+  cursor: pointer; background: var(--surface); color: var(--text);
+  transition: all .15s; font-weight: 500; white-space: nowrap;
+}
+.btn:hover { background: var(--surface2); border-color: var(--border2); }
+.btn-primary { background: var(--text); color: #fff; border-color: transparent; }
+.btn-primary:hover { opacity: .88; background: var(--text); }
+.btn-gold { background: var(--gold); color: #fff; border-color: transparent; }
+.btn-gold:hover { opacity: .88; }
+.btn-sm { padding: 5px 11px; font-size: 12px; }
+.btn-danger { border-color: #f5b8b4; color: var(--red); }
+.btn-danger:hover { background: var(--red-bg); }
+.btn-icon { padding: 7px; border-radius: var(--radius-sm); width: 32px; height: 32px; justify-content: center; }
+
+/* ── METRICS ── */
+.metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
+.metric-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 18px 20px; box-shadow: var(--shadow-sm);
+}
+.metric-label { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--text3); margin-bottom: 8px; }
+.metric-value { font-size: 32px; font-weight: 300; font-family: 'DM Serif Display', serif; line-height: 1; }
+.metric-sub { font-size: 12px; color: var(--text3); margin-top: 6px; }
+.mv-total { color: var(--text); }
+.mv-pending { color: var(--red); }
+.mv-complete { color: var(--green); }
+.mv-blocked { color: var(--amber); }
+
+/* ── CARDS ── */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-sm); }
+.card-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.card-title { font-size: 13px; font-weight: 600; }
+.card-body { padding: 16px 20px; }
+
+/* ── DEPT GRID ── */
+.dept-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+.dept-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
+.dept-card-label { margin-bottom: 6px; }
+.dept-card-count { font-size: 24px; font-weight: 300; font-family: 'DM Serif Display', serif; margin-bottom: 2px; }
+.dept-card-sub { font-size: 11px; color: var(--text3); }
+
+/* ── PERSON GRID ── */
+.person-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+.person-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
+.person-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.avatar { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; flex-shrink: 0; }
+.av-0{background:#dbeafe;color:#1e40af;} .av-1{background:#d1fae5;color:#065f46;} .av-2{background:#fef3c7;color:#92400e;}
+.av-3{background:#ffe4e6;color:#9f1239;} .av-4{background:#ede9fe;color:#4c1d95;} .av-5{background:#ccfbf1;color:#134e4a;}
+.person-name { font-size: 13px; font-weight: 500; }
+.mini-bars { display: flex; flex-direction: column; gap: 5px; }
+.mini-bar-row { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--text3); }
+.mini-bar-label { width: 46px; flex-shrink: 0; }
+.mini-bar-track { flex: 1; background: var(--surface2); border-radius: 2px; height: 4px; overflow: hidden; }
+.mini-bar-fill { height: 100%; border-radius: 2px; }
+.mini-bar-count { width: 16px; text-align: right; flex-shrink: 0; }
+
+/* ── TASK ITEMS ── */
+.task-list { display: flex; flex-direction: column; gap: 8px; }
+.task-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 13px 16px; transition: opacity .2s, border-color .15s;
+}
+.task-card:hover { border-color: var(--border2); }
+.task-card.done { opacity: .5; }
+.task-card.p-high { border-left: 3px solid var(--red); }
+.task-card.p-medium { border-left: 3px solid var(--blue); }
+.task-card.p-low { border-left: 3px solid var(--border); }
+.task-row { display: flex; align-items: flex-start; gap: 10px; }
+.task-cb { width: 15px; height: 15px; cursor: pointer; flex-shrink: 0; margin-top: 2px; accent-color: var(--green); }
+.task-body { flex: 1; min-width: 0; }
+.task-text { font-size: 13px; line-height: 1.5; }
+.task-text.struck { text-decoration: line-through; color: var(--text3); }
+.task-meta { display: flex; align-items: center; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+.task-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.task-notes-box { margin-top: 8px; padding: 8px 10px; background: var(--surface2); border-radius: var(--radius-sm); font-size: 12px; color: var(--text2); line-height: 1.5; }
+.task-notes-input { width: 100%; margin-top: 8px; padding: 7px 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 12px; font-family: inherit; color: var(--text); resize: none; min-height: 52px; }
+.task-notes-input:focus { outline: none; border-color: var(--border2); }
+
+/* ── BADGES ── */
+.badge { display: inline-flex; align-items: center; font-size: 11px; padding: 2px 8px; border-radius: 999px; font-weight: 500; white-space: nowrap; }
+.b-pending { background: var(--red-bg); color: var(--red); }
+.b-complete { background: var(--green-bg); color: var(--green); }
+.b-blocked { background: var(--amber-bg); color: var(--amber); }
+.b-wip { background: var(--blue-bg); color: var(--blue); }
+.b-alias { background: var(--purple-bg); color: var(--purple); }
+.b-date { background: var(--surface2); color: var(--text2); }
+.b-date.overdue { background: var(--red-bg); color: var(--red); font-weight: 600; }
+.b-date.due-soon { background: var(--amber-bg); color: var(--amber); font-weight: 500; }
+.pill { display: inline-flex; align-items: center; font-size: 11px; padding: 2px 9px; border-radius: 999px; border: 1px solid; white-space: nowrap; font-weight: 500; }
+
+/* dept colours */
+.d-Operations{background:#e8f7f0;color:#0f6e56;border-color:#5DCAA5;}
+.d-Finance{background:#fef6e4;color:#8a5c10;border-color:#d4a32a;}
+.d-HR{background:#f0ecfe;color:#4a32a0;border-color:#9c86e8;}
+.d-Sales{background:#edf3fc;color:#1a5fa8;border-color:#7aabdf;}
+.d-Admin{background:#f5f4f0;color:#4a4840;border-color:#b4b0a8;}
+.d-Technical{background:#fdf0ef;color:#9a2c20;border-color:#e8887e;}
+.d-Management{background:#edf7f0;color:#1a6640;border-color:#5ab87a;}
+.d-Other{background:#f5f4f0;color:#4a4840;border-color:#b4b0a8;}
+.src-samsung{background:#edf3fc;color:#1a5fa8;border-color:#7aabdf;}
+.src-teams{background:#f0ecfe;color:#4a32a0;border-color:#9c86e8;}
+.src-manual{background:#f5f4f0;color:#4a4840;border-color:#b4b0a8;}
+
+/* ── MEETING CARDS ── */
+.meeting-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 12px; overflow: hidden; }
+.meeting-card-header { padding: 14px 18px; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--border); }
+.meeting-title-text { font-size: 14px; font-weight: 600; margin-bottom: 5px; }
+.meeting-meta-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.meeting-card-body { padding: 14px 18px; }
+.meeting-summary { font-size: 13px; color: var(--text2); line-height: 1.6; margin-bottom: 12px; background: var(--surface2); padding: 10px 12px; border-radius: var(--radius-sm); }
+.kp-list { margin-bottom: 12px; }
+.kp-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--text3); margin-bottom: 6px; }
+.kp-item { font-size: 12px; color: var(--text2); padding: 4px 0; border-bottom: 1px solid var(--border); line-height: 1.5; }
+.kp-item:last-child { border-bottom: none; }
+.meeting-progress { font-size: 12px; color: var(--text3); text-align: right; flex-shrink: 0; }
+.prog-bar-wrap { background: var(--surface2); border-radius: 2px; height: 4px; width: 80px; margin-top: 6px; overflow: hidden; }
+.prog-bar-fill { height: 100%; background: var(--green); border-radius: 2px; transition: width .3s; }
+
+/* ── FORMS ── */
+.form-section { margin-bottom: 20px; }
+.form-label { font-size: 12px; font-weight: 500; color: var(--text2); margin-bottom: 5px; display: block; }
+.form-input, .form-select, .form-textarea {
+  width: 100%; padding: 9px 12px; font-size: 13px; font-family: inherit;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  color: var(--text); transition: border-color .15s;
+}
+.form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: var(--gold); }
+.form-textarea { resize: vertical; min-height: 150px; line-height: 1.6; }
+.form-row { display: flex; gap: 12px; flex-wrap: wrap; }
+.form-col { flex: 1; min-width: 140px; }
+
+/* ── UPLOAD ZONE ── */
+.upload-zone {
+  border: 2px dashed var(--border2); border-radius: var(--radius);
+  padding: 24px 20px; text-align: center; cursor: pointer;
+  transition: all .15s; margin-bottom: 14px;
+}
+.upload-zone:hover, .upload-zone.drag { border-color: var(--gold); background: var(--gold-light); }
+.upload-icon { font-size: 28px; margin-bottom: 8px; }
+.upload-text { font-size: 13px; color: var(--text2); line-height: 1.6; }
+.upload-text strong { color: var(--text); }
+.file-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--gold-light); border: 1px solid var(--gold-mid);
+  border-radius: 999px; padding: 4px 12px; font-size: 12px; color: var(--gold); font-weight: 500;
+  margin: 4px 4px 10px 0;
+}
+.chip-remove { cursor: pointer; background: none; border: none; color: var(--gold); font-size: 14px; line-height: 1; padding: 0 2px; }
+
+/* ── AI STATUS ── */
+.ai-status-box { display: flex; align-items: center; gap: 10px; padding: 14px 16px; background: var(--surface2); border-radius: var(--radius); margin-top: 12px; font-size: 13px; color: var(--text2); }
+.spinner { width: 16px; height: 16px; border: 2px solid var(--border2); border-top-color: var(--text); border-radius: 50%; animation: spin .8s linear infinite; flex-shrink: 0; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── SELECT DROPDOWNS in tasks ── */
+.mini-select { font-size: 11px; border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px; background: var(--surface2); color: var(--text); cursor: pointer; font-family: inherit; }
+.mini-select:focus { outline: none; border-color: var(--border2); }
+
+/* ── FILTER BAR ── */
+.filter-bar { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+.filter-pill { padding: 5px 13px; font-size: 12px; border: 1px solid var(--border); border-radius: 999px; cursor: pointer; background: var(--surface); color: var(--text2); transition: all .15s; white-space: nowrap; }
+.filter-pill:hover { border-color: var(--border2); color: var(--text); }
+.filter-pill.active { background: var(--text); color: #fff; border-color: transparent; }
+.filter-gap { flex: 1; }
+.filter-select { font-size: 12px; border: 1px solid var(--border); border-radius: 999px; padding: 5px 12px; background: var(--surface); color: var(--text2); cursor: pointer; }
+
+/* ── CEO REPORT ── */
+.ceo-layout { display: flex; flex-direction: column; gap: 20px; }
+.ceo-toggle { display: flex; gap: 4px; background: var(--surface2); border-radius: 999px; padding: 4px; }
+.ceo-toggle-btn { padding: 5px 14px; font-size: 12px; border: none; background: transparent; border-radius: 999px; cursor: pointer; color: var(--text2); font-family: inherit; transition: all .15s; }
+.ceo-toggle-btn.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+.report-view { display: none; }
+.report-view.active { display: block; }
+.report-formal { max-width: 720px; }
+.report-formal-header { text-align: center; padding-bottom: 20px; border-bottom: 2px solid var(--text); margin-bottom: 24px; }
+.report-formal-logo { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--text); }
+.report-formal-sub { font-size: 12px; color: var(--text3); margin-top: 4px; }
+.report-formal-date { font-size: 12px; color: var(--text2); margin-top: 8px; }
+.report-section { margin-bottom: 20px; }
+.report-section-title { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--text3); font-weight: 600; margin-bottom: 10px; padding-bottom: 4px; border-bottom: 1px solid var(--border); }
+.report-stat-row { display: flex; gap: 0; margin-bottom: 14px; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.report-stat { flex: 1; padding: 14px 16px; text-align: center; border-right: 1px solid var(--border); }
+.report-stat:last-child { border-right: none; }
+.report-stat-val { font-size: 28px; font-weight: 300; font-family: 'DM Serif Display', serif; }
+.report-stat-lbl { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.dept-progress-item { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.dept-progress-item:last-child { border-bottom: none; }
+.dept-bar-wrap { flex: 1; background: var(--surface2); border-radius: 2px; height: 6px; overflow: hidden; }
+.dept-bar-fill { height: 100%; border-radius: 2px; background: var(--green); }
+
+/* ── ALIAS TABLE ── */
+.alias-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.alias-table th { text-align: left; font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: .07em; padding: 8px 14px; border-bottom: 1px solid var(--border); }
+.alias-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.alias-table tr:last-child td { border-bottom: none; }
+.alias-tag { display: inline-block; background: var(--surface2); border: 1px solid var(--border); border-radius: 999px; font-size: 11px; padding: 2px 9px; margin: 2px 3px 2px 0; color: var(--text2); }
+
+/* ── MODAL ── */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 20px; opacity: 0; pointer-events: none; transition: opacity .2s; }
+.modal-overlay.open { opacity: 1; pointer-events: all; }
+.modal { background: var(--surface); border-radius: var(--radius); box-shadow: 0 20px 60px rgba(0,0,0,.15); width: 100%; max-width: 540px; max-height: 90vh; overflow-y: auto; }
+.modal-header { padding: 18px 22px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.modal-title { font-size: 15px; font-weight: 600; }
+.modal-close { background: none; border: none; cursor: pointer; color: var(--text3); font-size: 20px; line-height: 1; padding: 2px 6px; }
+.modal-close:hover { color: var(--text); }
+.modal-body { padding: 20px 22px; }
+.modal-footer { padding: 14px 22px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; }
+
+/* ── INFO BANNER ── */
+.info-banner { background: var(--gold-light); border: 1px solid var(--gold-mid); border-radius: var(--radius); padding: 12px 16px; font-size: 13px; color: var(--amber); line-height: 1.5; margin-bottom: 18px; display: flex; gap: 10px; }
+.warn-banner { background: var(--red-bg); border: 1px solid #f5c8c4; border-radius: var(--radius); padding: 12px 16px; font-size: 13px; color: var(--red); margin-bottom: 14px; }
+.success-banner { background: var(--green-bg); border: 1px solid #b8e8cc; border-radius: var(--radius); padding: 10px 14px; font-size: 13px; color: var(--green); margin-bottom: 14px; }
+
+/* ── SEARCH BOX ── */
+.search-wrap { position: relative; }
+.search-input { padding-left: 32px !important; }
+.search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text3); pointer-events: none; }
+
+/* ── EMPTY ── */
+.empty-state { padding: 3rem; text-align: center; color: var(--text3); font-size: 13px; }
+.empty-icon { font-size: 32px; margin-bottom: 10px; }
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 10px; }
+
+/* ── PRINT ── */
+@media print {
+  .sidebar, .topbar, .no-print { display: none !important; }
+  .main { margin-left: 0; }
+  .content { padding: 0; }
+  body { background: white; }
+  .card, .meeting-card, .task-card { box-shadow: none; }
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 768px) {
+  .sidebar { width: 100%; height: auto; position: relative; flex-direction: row; flex-wrap: wrap; }
+  .main { margin-left: 0; }
+  .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+  .content { padding: 16px; }
+}
+
+/* ── SECTION SPACING ── */
+.section { margin-bottom: 24px; }
+.section-head { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--text3); margin-bottom: 12px; }
+.divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+
+/* ── IMPORT PREVIEW ── */
+.import-preview-header { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+.import-kp-box { background: var(--surface2); border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 12px; }
+
+/* ── NOTE TOOLTIP ── */
+.note-toggle { font-size: 11px; color: var(--text3); cursor: pointer; background: none; border: none; padding: 0; font-family: inherit; }
+.note-toggle:hover { color: var(--text); text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-name">MJSR</div>
+    <div class="brand-sub">Meeting Intelligence Hub</div>
+  </div>
+  <div class="sidebar-nav">
+    <div class="nav-section-label">Overview</div>
+    <button class="nav-item active" onclick="showPage('dashboard',this)">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
+      Dashboard
+    </button>
+    <button class="nav-item" onclick="showPage('tasks',this)">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4h12M2 8h8M2 12h5"/></svg>
+      Tasks
+      <span id="nav-badge-tasks" style="margin-left:auto;font-size:10px;background:rgba(255,255,255,.15);padding:1px 6px;border-radius:999px;"></span>
+    </button>
+    <div class="nav-section-label">Records</div>
+    <button class="nav-item" onclick="showPage('meetings',this)">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="14" height="11" rx="1.5"/><path d="M5 1v4M11 1v4M1 7h14"/></svg>
+      Meeting log
+    </button>
+    <button class="nav-item" onclick="showPage('import',this)">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v8M5 7l3 3 3-3"/><path d="M2 11v2a1 1 0 001 1h10a1 1 0 001-1v-2"/></svg>
+      Import meeting
+    </button>
+    <div class="nav-section-label">Reports</div>
+    <button class="nav-item" onclick="showPage('ceo',this)">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 12l4-4 3 3 4-5 3 3"/></svg>
+      CEO / Finance view
+    </button>
+    <div class="nav-section-label">Settings</div>
+    <button class="nav-item" onclick="showPage('aliases',this)">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="5" r="3"/><path d="M1 14c0-3 2-4 5-4s5 1 5 4"/><path d="M11 2c1.5.5 2.5 1.8 2.5 3.5s-1 3-2.5 3.5M13.5 11c1 .3 2 1 2 3"/></svg>
+      Name aliases
+    </button>
+    <button class="nav-item" onclick="showPage('settings',this)">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="2"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.5 1.5M11.5 11.5 13 13M3 13l1.5-1.5M11.5 4.5 13 3"/></svg>
+      Settings
+    </button>
+  </div>
+  <div class="sidebar-footer">
+    <div class="storage-badge"><div class="storage-dot" id="storage-dot"></div><span id="storage-label">Saved locally</span></div>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div class="page-title" id="page-title">Dashboard</div>
+    <div class="topbar-actions" id="topbar-actions"></div>
+  </div>
+  <div class="content" id="content-area"></div>
+</div>
+
+<!-- MODAL: Add/Edit Task -->
+<div class="modal-overlay" id="task-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="task-modal-title">Add task</div>
+      <button class="modal-close" onclick="closeModal('task-modal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-section">
+        <label class="form-label">Task description</label>
+        <input type="text" class="form-input" id="tm-text" placeholder="Describe the action item">
+      </div>
+      <div class="form-row">
+        <div class="form-col">
+          <label class="form-label">Assignee</label>
+          <input type="text" class="form-input" id="tm-assignee" placeholder="First name">
+        </div>
+        <div class="form-col">
+          <label class="form-label">Department</label>
+          <select class="form-select" id="tm-dept">
+            <option value="">— select —</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-col">
+          <label class="form-label">Status</label>
+          <select class="form-select" id="tm-status">
+            <option value="pending">Pending</option>
+            <option value="wip">In progress</option>
+            <option value="complete">Complete</option>
+            <option value="blocked">Blocked</option>
+          </select>
+        </div>
+        <div class="form-col">
+          <label class="form-label">Priority</label>
+          <select class="form-select" id="tm-priority">
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+          </select>
+        </div>
+        <div class="form-col">
+          <label class="form-label">Due date</label>
+          <input type="date" class="form-input" id="tm-due">
+        </div>
+      </div>
+      <div class="form-section" style="margin-top:14px;">
+        <label class="form-label">Notes / comments</label>
+        <textarea class="form-textarea" id="tm-notes" placeholder="Add context, blockers, or follow-up notes..." style="min-height:80px;"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('task-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveTaskModal()">Save task</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const DEPTS = ['Operations','Finance','HR','Sales','Admin','Technical','Management','Other'];
+const DEPT_CLASS = {Operations:'d-Operations',Finance:'d-Finance',HR:'d-HR',Sales:'d-Sales',Admin:'d-Admin',Technical:'d-Technical',Management:'d-Management',Other:'d-Other'};
+const AV_COLORS = ['av-0','av-1','av-2','av-3','av-4','av-5'];
+const TODAY = new Date(); TODAY.setHours(0,0,0,0);
+let db = { meetings:[], tasks:[], aliases:[] };
+let taskFilter = 'all';
+let taskDeptFilter = 'all';
+let taskSrcFilter = 'all';
+let taskSearch = '';
+let editingTaskId = null;
+let ceoView = 'list';
+
+/* ── STORAGE: Google Sheets + localStorage hybrid ── */
+// Set your deployed Apps Script URL here after deployment:
+let SCRIPT_URL = localStorage.getItem('mjsr_script_url') || '';
+let syncStatus = 'local'; // 'local' | 'syncing' | 'synced' | 'error'
+let pendingSync = false;
+
+function setSyncStatus(s, detail) {
+  syncStatus = s;
+  const dot  = document.getElementById('storage-dot');
+  const lbl  = document.getElementById('storage-label');
+  if (!dot || !lbl) return;
+  const colors = { local:'#b8922e', syncing:'#1a5fa8', synced:'#1a7a4a', error:'#c0392b' };
+  const labels = {
+    local:   `${db.tasks.length} tasks · ${db.meetings.length} meetings · local only`,
+    syncing: 'Syncing to Google Sheets…',
+    synced:  `${db.tasks.length} tasks · ${db.meetings.length} meetings · Sheets live`,
+    error:   'Sync error — saved locally'
+  };
+  dot.style.background = colors[s];
+  lbl.textContent = detail || labels[s];
+}
+
+// Write to localStorage immediately, then push to Sheets in background
+function saveDB(skipRemote) {
+  try { localStorage.setItem('mjsr_hub_db', JSON.stringify(db)); } catch(e){}
+  setSyncStatus(SCRIPT_URL ? 'syncing' : 'local');
+  if (!skipRemote && SCRIPT_URL) pushToSheets();
+}
+
+async function pushToSheets(action, payload) {
+  if (!SCRIPT_URL) return;
+  try {
+    const body = payload || { action:'syncAll', data: db };
+    const resp = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify(body)
+    });
+    const result = await resp.json();
+    if (result.error) throw new Error(result.error);
+    setSyncStatus('synced');
+    return result;
+  } catch(err) {
+    setSyncStatus('error', 'Sync failed — data saved locally');
+    console.warn('Sheets sync error:', err.message);
+  }
+}
+
+async function loadDB() {
+  // 1. Load from localStorage for instant display
+  try {
+    const raw = localStorage.getItem('mjsr_hub_db');
+    if (raw) { db = JSON.parse(raw); }
+    else { seedSampleData(); saveDB(true); }
+  } catch(e) { seedSampleData(); saveDB(true); }
+  setSyncStatus('local');
+
+  // 2. If script URL is set, pull fresh data from Sheets in background
+  if (SCRIPT_URL) {
+    setSyncStatus('syncing', 'Loading from Google Sheets…');
+    try {
+      const resp = await fetch(SCRIPT_URL + '?action=getAll', { method: 'GET' });
+      const result = await resp.json();
+      if (result.meetings && result.tasks && result.aliases) {
+        db.meetings = result.meetings;
+        db.tasks    = result.tasks;
+        db.aliases  = result.aliases;
+        localStorage.setItem('mjsr_hub_db', JSON.stringify(db));
+        setSyncStatus('synced');
+        renderCurrentPage();
+        updateNavBadge();
+      }
+    } catch(err) {
+      setSyncStatus('error', 'Sheets unavailable — using local data');
+    }
+  }
+}
+
+function updateStorageLabel() { setSyncStatus(syncStatus); }
+
+function updateNavBadge() {
+  const p = db.tasks.filter(t=>t.status==='pending').length + db.tasks.filter(t=>t.status==='wip').length;
+  const b = document.getElementById('nav-badge-tasks');
+  if (b) b.textContent = p || '';
+}
+
+function clearAllData() {
+  if (!confirm('This will permanently delete ALL meetings, tasks and data from both local storage and Google Sheets. Are you sure?')) return;
+  db = { meetings:[], tasks:[], aliases: db.aliases };
+  saveDB();
+  showPage('dashboard', document.querySelector('.nav-item'));
+  renderDashboard();
+}
+
+// Called from Settings page to save the Script URL
+function saveScriptURL() {
+  const url = document.getElementById('sett-url').value.trim();
+  SCRIPT_URL = url;
+  localStorage.setItem('mjsr_script_url', url);
+  setSyncStatus('syncing', 'Testing connection…');
+  loadDB().then(() => alert('Connected! Data loaded from Google Sheets.'));
+}
+
+/* ── SEED DATA ── */
+function seedSampleData() {
+  db.aliases = [
+    {id:'a1',canonical:'Momin',variants:['Moorman','Moeman','Momeen','Mr Moorman','Mr. Moorman']},
+    {id:'a2',canonical:'Martin',variants:['Martin Schultz','Mr Martin','Martyn','Marten']},
+    {id:'a3',canonical:'Bilal',variants:['Bilall','Bilaal','Bilal Tariq']},
+    {id:'a4',canonical:'Shahzad',variants:['Shazad','Shahzaad','Shehzad','Shahzad Alam']},
+    {id:'a5',canonical:'Abid',variants:['Abeed','Abid Nawaz']},
+    {id:'a6',canonical:'Ashfaq',variants:['Ashfak','Ashphaq','Ashfaq Malak']},
+    {id:'a7',canonical:'Christos',variants:['Xristos']},
+    {id:'a8',canonical:'Hamadzab',variants:['Hamadza','Hamza']},
+    {id:'a9',canonical:'Hasan',variants:['Hassan','Hessen']},
+  ];
+  const d = s => { const x = new Date(); x.setDate(x.getDate()+s); return x.toISOString().slice(0,10); };
+  const m1='m_proposals', m2='m_website';
+  db.meetings = [
+    {id:m1,title:'Proposals, Procurement & Pricing Review',date:'2026-04-06',source:'MS Teams / Read AI',dept:'Management',
+     summary:'Organised proposal work with Martin leading technical content and Zia/Muhammad owning financials. Agreed to centralise templates on Teams/OneDrive. The 64-page Zumang Megapark draft requires financial and legal inputs. PistenBully spares consolidated with technician costs excluded from the immediate approval. PKR 4,000 family anchor pricing with three F&B voucher tiers assigned for feasibility review.',
+     keyPoints:['Martin leads technical proposals; Zia/Muhammad handle financials — 85/15 time split confirmed','Zumang Megapark 64-page draft needs financial, legal, phasing inputs before circulating','PistenBully spares consolidated; technician costs excluded from Mr Mayor approval','Vehicle checkpoint live at Spinova TMA; form needs duplicate-prevention fix','PKR 4,000 family anchor + green/blue/gold F&B voucher tiers — Momin to confirm feasibility'],rawText:''},
+    {id:m2,title:'Website Review and Updates',date:'2026-03-16',source:'Samsung Notes',dept:'Sales',
+     summary:'Reviewed MJSR website identifying four quick-win improvements: image resolution, content repetition, design consistency, font alignment with logo. Agreed on six-section restructure and consolidated booking page. Online prices must update by the 18th. JazzCash/EasyPaisa integration in final stages, salesperson needed for ticketing oversight.',
+     keyPoints:['Four quick wins: higher-res images, reduce repetition, consistent fonts, cleaner hero section','Restructure into six sections: Home, About Us, Things To Do, Visitor Guide, Stay & Dine, Book Tickets','All booking options to be centralised on a single Book Tickets page','Online prices must update by 18th March per new pricing document','JazzCash/EasyPaisa integration in final stages — awaiting PayPro contract'],rawText:''},
+  ];
+  const t1tasks = [
+    {text:'Share historical proposal database and documents with the team',assignee:'Ammar',dept:'Management',priority:'high'},
+    {text:'Create 2-3 centralised proposal template documents and upload to MS Teams',assignee:'Martin',dept:'Management',priority:'high'},
+    {text:'Prepare financial Excel model on Teams using previous project templates',assignee:'Muhammad',dept:'Finance',priority:'high'},
+    {text:'Share Zumang Megapark 64-page draft with Zia and Muhammad',assignee:'Martin',dept:'Management',priority:'high'},
+    {text:'Engage vendors and begin remote outreach for preliminary site assessments',assignee:'Martin',dept:'Operations',priority:'medium'},
+    {text:'Share Kotli Satiana project documentation with Zia and Hamadzab',assignee:'Martin',dept:'Management',priority:'medium'},
+    {text:'Source independent technician for PistenBully winch inspection and obtain cost estimate',assignee:'Martin',dept:'Technical',priority:'high'},
+    {text:'Consolidate known spares with PistenBully recommended list, remove technician costs, seek Mr Mayor approval',assignee:'Martin',dept:'Technical',priority:'high'},
+    {text:'Obtain and share Christos quotation for winch inspection and installation',assignee:'Martin',dept:'Technical',priority:'medium'},
+    {text:'Expect and review quotation from Bilal for new slingshot cord',assignee:'Hamadzab',dept:'Operations',priority:'medium'},
+    {text:'Request Colonel Asif assistance to establish police checkpoint below Green Valley road split',assignee:'Martin',dept:'Operations',priority:'medium'},
+    {text:'Provide additional staff member for checkpoint data collection',assignee:'Ashfaq',dept:'Admin',priority:'medium'},
+    {text:'Adjust vehicle data capture form to prevent duplicate vehicle counts',assignee:'Martin',dept:'Operations',priority:'high'},
+    {text:'Review pricing document and provide feedback before 4:00 follow-up meeting',assignee:'Zia',dept:'Finance',priority:'high'},
+    {text:'Verify F&B feasibility of recommended dishes and voucher bundle prices with F&B team',assignee:'Momin',dept:'Finance',priority:'high',aliasResolved:true,aliasFrom:'Mr. Moorman'},
+  ];
+  const t2tasks = [
+    {text:'Make changes to website structure and design per discussed layout',assignee:'',dept:'Sales',priority:'high'},
+    {text:'Share screenshots of all changes for confirmation before publishing',assignee:'',dept:'Sales',priority:'high'},
+    {text:'Test video functionality on website hero section for lag issues',assignee:'',dept:'Technical',priority:'medium'},
+    {text:'Research exact font used in the Malam Jabba logo for heading consistency',assignee:'',dept:'Sales',priority:'medium'},
+    {text:'Create pricing document: activity name, normal price, increased price, timeframe',assignee:'',dept:'Finance',priority:'high',due:'2026-03-18',status:'complete'},
+    {text:'Update online ticket prices on website (effective 18th March to end of March)',assignee:'',dept:'Sales',priority:'high',due:'2026-03-18'},
+    {text:'Familiarise with WordPress analytics and track ticket and revenue performance',assignee:'Hasan',dept:'Sales',priority:'medium'},
+    {text:'Provide access to hello@malamdarbaskyresorts email for OTPs and ticketing queries',assignee:'',dept:'Admin',priority:'high'},
+    {text:'Make recommendations for website pop-up notification content',assignee:'',dept:'Sales',priority:'low'},
+  ];
+  t1tasks.forEach(t=>db.tasks.push({id:'t'+Date.now()+Math.random().toString(36).slice(2,6),text:t.text,assignee:t.assignee||'',dept:t.dept,status:t.status||'pending',due:t.due||'',meetingId:m1,priority:t.priority,aliasResolved:t.aliasResolved||false,aliasFrom:t.aliasFrom||null,notes:''}));
+  t2tasks.forEach(t=>db.tasks.push({id:'t'+Date.now()+Math.random().toString(36).slice(2,6),text:t.text,assignee:t.assignee||'',dept:t.dept,status:t.status||'pending',due:t.due||'',meetingId:m2,priority:t.priority,aliasResolved:false,aliasFrom:null,notes:''}));
+}
+
+/* ── ALIAS ENGINE ── */
+function resolveAlias(raw) {
+  if (!raw) return { name:raw, resolved:false, from:null };
+  const n = raw.trim().toLowerCase();
+  for (const e of db.aliases) {
+    if (e.canonical.toLowerCase() === n) return { name:e.canonical, resolved:false, from:null };
+    for (const v of e.variants) if (v.trim().toLowerCase() === n) return { name:e.canonical, resolved:true, from:raw };
+  }
+  for (const e of db.aliases) {
+    const cl = e.canonical.toLowerCase();
+    if (n.includes(cl) || cl.includes(n)) return { name:e.canonical, resolved:false, from:null };
+    for (const v of e.variants) { const vl = v.trim().toLowerCase(); if (n.includes(vl)||vl.includes(n)) return { name:e.canonical, resolved:true, from:raw }; }
+  }
+  return { name:raw.trim(), resolved:false, from:null };
+}
+function normaliseText(text) {
+  let o = text;
+  for (const e of db.aliases) for (const v of e.variants) {
+    const re = new RegExp('\\b'+v.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b','gi');
+    o = o.replace(re, e.canonical);
+  }
+  return o;
+}
+
+/* ── HELPERS ── */
+function uid() { return 't'+Date.now()+Math.random().toString(36).slice(2,6); }
+function isOverdue(t) { if(t.status==='complete'||!t.due) return false; const d=new Date(t.due);d.setHours(0,0,0,0);return d<TODAY; }
+function isDueSoon(t) { if(t.status==='complete'||!t.due) return false; const d=new Date(t.due);d.setHours(0,0,0,0);const diff=(d-TODAY)/(864e5);return diff>=0&&diff<=3; }
+function fmtDate(s) { if(!s) return ''; const d=new Date(s+'T00:00:00');return d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}); }
+function getInitials(n) { return n.split(' ').map(p=>p[0]).join('').toUpperCase().slice(0,2)||'?'; }
+function getAVColor(n) { let h=0; for(const c of n) h=(h*31+c.charCodeAt(0))&0xffff; return AV_COLORS[h%AV_COLORS.length]; }
+function pClass(p) { return p==='high'?'p-high':p==='low'?'p-low':'p-medium'; }
+
+function deptPill(d) { if(!d)return''; return`<span class="pill ${DEPT_CLASS[d]||'d-Other'}">${d}</span>`; }
+function srcPill(s) {
+  if(!s)return'';
+  const cl = s.includes('Samsung')?'src-samsung':s==='Manual'?'src-manual':'src-teams';
+  const lbl = s.includes('Samsung')?'Samsung Notes':s==='Manual'?'Manual':'Read AI';
+  return `<span class="pill ${cl}">${lbl}</span>`;
+}
+function statusBadge(s) {
+  const m={pending:'b-pending',complete:'b-complete',blocked:'b-blocked',wip:'b-wip'};
+  const l={pending:'Pending',complete:'Complete',blocked:'Blocked',wip:'In progress'};
+  return `<span class="badge ${m[s]||'b-pending'}">${l[s]||s}</span>`;
+}
+function dueBadge(t) {
+  if(!t.due) return '';
+  const cls = isOverdue(t)?'overdue':isDueSoon(t)?'due-soon':'';
+  const prefix = isOverdue(t)?'Overdue: ':isDueSoon(t)?'Due soon: ':'Due: ';
+  return `<span class="badge b-date ${cls}">${prefix}${fmtDate(t.due)}</span>`;
+}
+
+/* ── PAGE ROUTING ── */
+const PAGE_TITLES = {dashboard:'Dashboard',tasks:'Tasks',meetings:'Meeting log',import:'Import meeting',ceo:'CEO / Finance view',aliases:'Name aliases',settings:'Settings'};
+function showPage(name, btn) {
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  else { const b=document.querySelector(`[onclick*="'${name}'"]`); if(b)b.classList.add('active'); }
+  document.getElementById('page-title').textContent = PAGE_TITLES[name]||name;
+  const pages = {dashboard:renderDashboard,tasks:renderTasksPage,meetings:renderMeetings,import:renderImport,ceo:renderCEO,aliases:renderAliases,settings:renderSettings};
+  if(pages[name]) pages[name]();
+}
+
+/* ── TOPBAR ACTIONS ── */
+function setTopbarActions(html) { document.getElementById('topbar-actions').innerHTML = html; }
+
+/* ── DASHBOARD ── */
+function renderDashboard() {
+  const tasks=db.tasks, total=tasks.length;
+  const pending=tasks.filter(t=>t.status==='pending').length;
+  const complete=tasks.filter(t=>t.status==='complete').length;
+  const blocked=tasks.filter(t=>t.status==='blocked').length;
+  const wip=tasks.filter(t=>t.status==='wip').length;
+  const overdue=tasks.filter(t=>isOverdue(t)).length;
+  const dueSoon=tasks.filter(t=>isDueSoon(t)).length;
+
+  document.getElementById('nav-badge-tasks').textContent = pending+wip||'';
+  setTopbarActions(`<button class="btn btn-gold btn-sm" onclick="showPage('import',null)">+ Import meeting</button>`);
+
+  // dept counts
+  const dc={};
+  tasks.forEach(t=>{const d=t.dept||'Other';if(!dc[d])dc[d]={total:0,pending:0,complete:0,blocked:0,wip:0};dc[d].total++;dc[d][t.status]=(dc[d][t.status]||0)+1;});
+
+  // person counts
+  const pp={};
+  tasks.forEach(t=>{if(!t.assignee)return;if(!pp[t.assignee])pp[t.assignee]={total:0,pending:0,complete:0,blocked:0,wip:0};pp[t.assignee].total++;pp[t.assignee][t.status]=(pp[t.assignee][t.status]||0)+1;});
+
+  const overdueItems = tasks.filter(t=>isOverdue(t)||isDueSoon(t));
+
+  document.getElementById('content-area').innerHTML = `
+    <div class="metrics-grid">
+      <div class="metric-card"><div class="metric-label">Total tasks</div><div class="metric-value mv-total">${total}</div><div class="metric-sub">${db.meetings.length} meetings logged</div></div>
+      <div class="metric-card"><div class="metric-label">Pending</div><div class="metric-value mv-pending">${pending+wip}</div><div class="metric-sub">${overdue} overdue · ${dueSoon} due soon</div></div>
+      <div class="metric-card"><div class="metric-label">Complete</div><div class="metric-value mv-complete">${complete}</div><div class="metric-sub">${total>0?Math.round(complete/total*100):0}% completion rate</div></div>
+      <div class="metric-card"><div class="metric-label">Blocked</div><div class="metric-value mv-blocked">${blocked}</div><div class="metric-sub">require decision</div></div>
+    </div>
+
+    ${overdueItems.length?`<div class="section"><div class="section-head">Overdue &amp; due soon</div><div class="task-list">${overdueItems.map(t=>taskCardHtml(t,true)).join('')}</div></div>`:''}
+
+    <div class="section">
+      <div class="section-head">By department</div>
+      <div class="dept-grid">${Object.entries(dc).sort((a,b)=>b[1].total-a[1].total).map(([dept,s])=>`
+        <div class="dept-card">
+          <div class="dept-card-label">${deptPill(dept)}</div>
+          <div class="dept-card-count">${s.total}</div>
+          <div class="dept-card-sub">${s.complete||0} done · ${(s.pending||0)+(s.wip||0)} open${s.blocked?` · ${s.blocked} blocked`:''}</div>
+        </div>`).join('')}
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-head">By person</div>
+      <div class="person-grid">${Object.entries(pp).map(([name,s])=>{
+        const tot=s.total||1,cl=getAVColor(name);
+        return`<div class="person-card">
+          <div class="person-header"><div class="avatar ${cl}">${getInitials(name)}</div><div class="person-name">${name}</div></div>
+          <div class="mini-bars">
+            <div class="mini-bar-row"><span class="mini-bar-label">Pending</span><div class="mini-bar-track"><div class="mini-bar-fill" style="width:${Math.round((s.pending||0)/tot*100)}%;background:#c0392b;"></div></div><span class="mini-bar-count">${s.pending||0}</span></div>
+            <div class="mini-bar-row"><span class="mini-bar-label">In prog.</span><div class="mini-bar-track"><div class="mini-bar-fill" style="width:${Math.round((s.wip||0)/tot*100)}%;background:#1a5fa8;"></div></div><span class="mini-bar-count">${s.wip||0}</span></div>
+            <div class="mini-bar-row"><span class="mini-bar-label">Done</span><div class="mini-bar-track"><div class="mini-bar-fill" style="width:${Math.round((s.complete||0)/tot*100)}%;background:#1a7a4a;"></div></div><span class="mini-bar-count">${s.complete||0}</span></div>
+          </div>
+        </div>`;}).join('')}
+      </div>
+    </div>`;
+}
+
+/* ── TASK CARD HTML ── */
+function taskCardHtml(t, minimal=false) {
+  const mtg = db.meetings.find(m=>m.id===t.meetingId);
+  const notesHtml = t.notes ? `<div class="task-notes-box">${t.notes}</div>` : '';
+  const aliasBadge = t.aliasResolved ? `<span class="badge b-alias">was "${t.aliasFrom}"</span>` : '';
+  const mtgPill = mtg&&!minimal ? `<span class="badge b-date" style="cursor:pointer" onclick="showPage('meetings',null)">${mtg.title}</span>` : '';
+  const srcPillHtml = minimal && mtg ? srcPill(mtg.source) : '';
+  const statSel = !minimal ? `<select class="mini-select" onchange="qChangeStatus('${t.id}',this.value)">${['pending','wip','complete','blocked'].map(s=>`<option value="${s}"${t.status===s?' selected':''}>${{pending:'Pending',wip:'In progress',complete:'Complete',blocked:'Blocked'}[s]}</option>`).join('')}</select>` : '';
+  const deptSel = !minimal ? `<select class="mini-select" onchange="qChangeDept('${t.id}',this.value)"><option value="">Dept</option>${DEPTS.map(d=>`<option value="${d}"${t.dept===d?' selected':''}>${d}</option>`).join('')}</select>` : '';
+
+  return `<div class="task-card ${t.status==='complete'?'done':''} ${pClass(t.priority||'medium')}" id="tc-${t.id}">
+    <div class="task-row">
+      <input type="checkbox" class="task-cb" ${t.status==='complete'?'checked':''} onchange="qToggle('${t.id}',this.checked)">
+      <div class="task-body">
+        <div class="task-text ${t.status==='complete'?'struck':''}">${t.text}</div>
+        ${notesHtml}
+        <div class="task-meta">
+          ${statusBadge(t.status)}
+          ${t.assignee?`<span class="badge b-date"><svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:2px;vertical-align:middle;"><circle cx="8" cy="6" r="3"/><path d="M2 14c0-3 2.7-5 6-5s6 2 6 5"/></svg>${t.assignee}</span>`:''}
+          ${deptPill(t.dept)}
+          ${dueBadge(t)}
+          ${aliasBadge}
+          ${srcPillHtml}
+          ${mtgPill}
+          ${statSel}
+          ${deptSel}
+          ${!minimal?`<button class="note-toggle" onclick="toggleNoteEdit('${t.id}')">${t.notes?'edit note':'+ note'}</button>`:''}
+        </div>
+        <div id="note-edit-${t.id}" style="display:none;">
+          <textarea class="task-notes-input" id="note-input-${t.id}" placeholder="Add notes, blockers, context...">${t.notes||''}</textarea>
+          <div style="display:flex;gap:6px;margin-top:4px;">
+            <button class="btn btn-sm btn-primary" onclick="saveNote('${t.id}')">Save note</button>
+            <button class="btn btn-sm" onclick="document.getElementById('note-edit-${t.id}').style.display='none'">Cancel</button>
+          </div>
+        </div>
+      </div>
+      <div class="task-actions">
+        ${!minimal?`<button class="btn btn-icon btn-sm" title="Edit task" onclick="openEditTask('${t.id}')"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M11 2l3 3-8 8H3v-3l8-8z"/></svg></button>`:''}
+        <button class="btn btn-icon btn-sm btn-danger" title="Remove" onclick="deleteTask('${t.id}')"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 4h12M5 4V2h6v2M6 7v5M10 7v5M3 4l1 10h8l1-10"/></svg></button>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ── TASKS PAGE ── */
+function renderTasksPage() {
+  const pending = db.tasks.filter(t=>t.status==='pending').length;
+  const wip = db.tasks.filter(t=>t.status==='wip').length;
+  setTopbarActions(`<button class="btn btn-primary btn-sm" onclick="openAddTask()">+ Add task</button>`);
+  let filtered = [...db.tasks];
+  if (taskFilter !== 'all') filtered = filtered.filter(t=>t.status===taskFilter);
+  if (taskDeptFilter !== 'all') filtered = filtered.filter(t=>t.dept===taskDeptFilter);
+  if (taskSrcFilter !== 'all') filtered = filtered.filter(t=>{const m=db.meetings.find(m=>m.id===t.meetingId);return m&&m.source===taskSrcFilter;});
+  if (taskSearch) { const q=taskSearch.toLowerCase(); filtered=filtered.filter(t=>t.text.toLowerCase().includes(q)||(t.assignee&&t.assignee.toLowerCase().includes(q))||(t.notes&&t.notes.toLowerCase().includes(q))); }
+
+  document.getElementById('content-area').innerHTML = `
+    <div class="filter-bar">
+      ${['all','pending','wip','blocked','complete'].map(f=>`<button class="filter-pill ${taskFilter===f?'active':''}" onclick="setTFilter('${f}')">${{all:'All',pending:'Pending',wip:'In progress',blocked:'Blocked',complete:'Complete'}[f]}</button>`).join('')}
+      <div class="filter-gap"></div>
+      <div class="search-wrap"><span class="search-icon"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5l3 3"/></svg></span><input type="text" class="filter-select search-input" placeholder="Search tasks…" value="${taskSearch}" oninput="taskSearch=this.value;renderTasksPage()" style="padding-left:28px;border-radius:999px;border:1px solid var(--border);"></div>
+      <select class="filter-select" onchange="taskDeptFilter=this.value;renderTasksPage()">
+        <option value="all">All departments</option>
+        ${DEPTS.map(d=>`<option value="${d}" ${taskDeptFilter===d?'selected':''}>${d}</option>`).join('')}
+      </select>
+      <select class="filter-select" onchange="taskSrcFilter=this.value;renderTasksPage()">
+        <option value="all">All sources</option>
+        <option value="MS Teams / Read AI" ${taskSrcFilter==='MS Teams / Read AI'?'selected':''}>Read AI</option>
+        <option value="Samsung Notes" ${taskSrcFilter==='Samsung Notes'?'selected':''}>Samsung Notes</option>
+        <option value="Manual" ${taskSrcFilter==='Manual'?'selected':''}>Manual</option>
+      </select>
+    </div>
+    ${filtered.length ? `<div class="task-list">${filtered.map(t=>taskCardHtml(t)).join('')}</div>` : '<div class="empty-state"><div class="empty-icon">✓</div><div>No tasks match your filters.</div></div>'}`;
+}
+
+function setTFilter(f) { taskFilter=f; renderTasksPage(); }
+function qToggle(id,checked) { const t=db.tasks.find(t=>t.id===id);if(t){t.status=checked?'complete':'pending';saveDB();renderCurrentPage();}}
+function qChangeStatus(id,val) { const t=db.tasks.find(t=>t.id===id);if(t){t.status=val;saveDB();renderCurrentPage();}}
+function qChangeDept(id,val) { const t=db.tasks.find(t=>t.id===id);if(t){t.dept=val;saveDB();renderCurrentPage();}}
+function deleteTask(id) { if(!confirm('Remove this task?'))return; db.tasks=db.tasks.filter(t=>t.id!==id);saveDB();renderCurrentPage();}
+function toggleNoteEdit(id) { const el=document.getElementById('note-edit-'+id);if(el)el.style.display=el.style.display==='none'?'block':'none'; }
+function saveNote(id) { const t=db.tasks.find(t=>t.id===id);const el=document.getElementById('note-input-'+id);if(t&&el){t.notes=el.value.trim();saveDB();renderCurrentPage();}}
+function renderCurrentPage() { const a=document.getElementById('page-title').textContent;const map={'Dashboard':renderDashboard,'Tasks':renderTasksPage,'Meeting log':renderMeetings,'CEO / Finance view':renderCEO};if(map[a])map[a](); }
+
+/* ── ADD/EDIT TASK MODAL ── */
+function populateDeptSelect(selId) { const s=document.getElementById(selId);s.innerHTML='<option value="">— select —</option>'+DEPTS.map(d=>`<option value="${d}">${d}</option>`).join(''); }
+function openAddTask() {
+  editingTaskId = null;
+  document.getElementById('task-modal-title').textContent='Add task';
+  document.getElementById('tm-text').value='';
+  document.getElementById('tm-assignee').value='';
+  document.getElementById('tm-notes').value='';
+  document.getElementById('tm-due').value='';
+  document.getElementById('tm-status').value='pending';
+  document.getElementById('tm-priority').value='medium';
+  populateDeptSelect('tm-dept');
+  document.getElementById('task-modal').classList.add('open');
+}
+function openEditTask(id) {
+  const t=db.tasks.find(t=>t.id===id);if(!t)return;
+  editingTaskId=id;
+  document.getElementById('task-modal-title').textContent='Edit task';
+  document.getElementById('tm-text').value=t.text;
+  document.getElementById('tm-assignee').value=t.assignee||'';
+  document.getElementById('tm-notes').value=t.notes||'';
+  document.getElementById('tm-due').value=t.due||'';
+  document.getElementById('tm-status').value=t.status;
+  document.getElementById('tm-priority').value=t.priority||'medium';
+  populateDeptSelect('tm-dept');
+  document.getElementById('tm-dept').value=t.dept||'';
+  document.getElementById('task-modal').classList.add('open');
+}
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function saveTaskModal() {
+  const text=document.getElementById('tm-text').value.trim();
+  if(!text){alert('Please enter a task description.');return;}
+  const taskData = {
+    text, assignee:document.getElementById('tm-assignee').value.trim(),
+    dept:document.getElementById('tm-dept').value,
+    status:document.getElementById('tm-status').value,
+    priority:document.getElementById('tm-priority').value,
+    due:document.getElementById('tm-due').value,
+    notes:document.getElementById('tm-notes').value.trim(),
+  };
+  if (editingTaskId) {
+    const t=db.tasks.find(t=>t.id===editingTaskId);
+    if(t) Object.assign(t, taskData);
+  } else {
+    db.tasks.push({id:uid(),...taskData,meetingId:null,aliasResolved:false,aliasFrom:null});
+  }
+  saveDB(); closeModal('task-modal'); renderCurrentPage();
+}
+
+/* ── MEETINGS ── */
+function renderMeetings() {
+  setTopbarActions(`<div class="search-wrap"><span class="search-icon"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5l3 3"/></svg></span><input type="text" class="form-input search-input" id="mtg-search" placeholder="Search meetings…" oninput="renderMeetingList(this.value)" style="width:200px;padding:6px 10px 6px 28px;font-size:12px;"></div>`);
+  document.getElementById('content-area').innerHTML = `<div id="meeting-list-wrap"></div>`;
+  renderMeetingList('');
+}
+function renderMeetingList(q) {
+  const meetings = [...db.meetings].sort((a,b)=>b.date.localeCompare(a.date))
+    .filter(m=>!q||m.title.toLowerCase().includes(q.toLowerCase())||m.summary.toLowerCase().includes(q.toLowerCase()));
+  const wrap = document.getElementById('meeting-list-wrap');
+  if (!wrap) return;
+  if (!meetings.length) { wrap.innerHTML='<div class="empty-state"><div class="empty-icon">📋</div><div>No meetings yet. Import one to get started.</div></div>'; return; }
+  wrap.innerHTML = meetings.map(m => {
+    const mt=db.tasks.filter(t=>t.meetingId===m.id);
+    const done=mt.filter(t=>t.status==='complete').length;
+    const pct=mt.length?Math.round(done/mt.length*100):0;
+    const kpsHtml=m.keyPoints&&m.keyPoints.length?`<div class="kp-list"><div class="kp-label">Key points</div>${m.keyPoints.map(k=>`<div class="kp-item">— ${k}</div>`).join('')}</div>`:'';
+    return `<div class="meeting-card">
+      <div class="meeting-card-header">
+        <div>
+          <div class="meeting-title-text">${m.title}</div>
+          <div class="meeting-meta-row">${m.date}${srcPill(m.source)}${deptPill(m.dept)}</div>
+        </div>
+        <div class="meeting-progress">
+          <div>${done}/${mt.length} done</div>
+          <div class="prog-bar-wrap"><div class="prog-bar-fill" style="width:${pct}%"></div></div>
+        </div>
+      </div>
+      <div class="meeting-card-body">
+        ${m.summary?`<div class="meeting-summary">${m.summary}</div>`:''}
+        ${kpsHtml}
+        ${mt.length?`<div class="section-head" style="margin-top:4px;">Tasks (${mt.length})</div><div class="task-list">${mt.map(t=>taskCardHtml(t,true)).join('')}</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ── IMPORT ── */
+function renderImport() {
+  setTopbarActions('');
+  document.getElementById('content-area').innerHTML = `
+    <div style="max-width:700px;">
+      <div class="info-banner">
+        <span>&#9432;</span>
+        <span>Both <strong>MS Teams / Read AI</strong> and <strong>Samsung Notes</strong> voice summary formats are fully supported. Paste the raw output from either app and Claude will read, summarise, and extract every action item automatically.</span>
+      </div>
+      <div class="form-row" style="margin-bottom:14px;">
+        <div class="form-col" style="flex:2;"><label class="form-label">Meeting title</label><input type="text" class="form-input" id="imp-title" placeholder="e.g. Weekly ops review"></div>
+        <div class="form-col"><label class="form-label">Date</label><input type="date" class="form-input" id="imp-date" value="${new Date().toISOString().slice(0,10)}"></div>
+      </div>
+      <div class="form-row" style="margin-bottom:16px;">
+        <div class="form-col"><label class="form-label">Source</label>
+          <select class="form-select" id="imp-source">
+            <option>MS Teams / Read AI</option><option>Samsung Notes</option><option>Manual</option>
+          </select>
+        </div>
+        <div class="form-col"><label class="form-label">Department (optional — AI will detect)</label>
+          <select class="form-select" id="imp-dept">
+            <option value="">Auto-detect</option>
+            ${DEPTS.map(d=>`<option>${d}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-inp').click()" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="onFileDrop(event)">
+        <div class="upload-icon">&#8679;</div>
+        <div class="upload-text"><strong>Click to upload</strong> or drag and drop<br>Accepts .txt, .md, or any plain text file from your device</div>
+        <input type="file" id="file-inp" accept=".txt,.md,.text" style="display:none" onchange="handleFile(event)">
+      </div>
+      <div id="file-chip-area"></div>
+      <label class="form-label">Or paste notes directly</label>
+      <textarea class="form-textarea" id="imp-text" placeholder="Paste your meeting output here — Read AI summary, Samsung Notes voice summary, or any transcript. Claude will extract the structure automatically."></textarea>
+      <div style="display:flex;gap:10px;margin-top:16px;">
+        <button class="btn btn-primary" id="imp-btn" onclick="runImport()">Analyse with Claude AI</button>
+        <button class="btn" onclick="document.getElementById('imp-text').value='';document.getElementById('imp-title').value='';document.getElementById('file-chip-area').innerHTML='';document.getElementById('imp-preview').innerHTML='';">Clear</button>
+      </div>
+      <div id="imp-status"></div>
+      <div id="imp-preview" style="margin-top:16px;"></div>
+    </div>`;
+}
+
+function onFileDrop(e) { e.preventDefault(); document.getElementById('upload-zone').classList.remove('drag'); const f=e.dataTransfer.files[0]; if(f) readFile(f); }
+function handleFile(e) { const f=e.target.files[0]; if(f) readFile(f); }
+function readFile(file) {
+  const r=new FileReader();
+  r.onload=ev=>{
+    document.getElementById('imp-text').value=ev.target.result;
+    document.getElementById('file-chip-area').innerHTML=`<span class="file-chip">📄 ${file.name}<button class="chip-remove" onclick="document.getElementById('file-chip-area').innerHTML='';document.getElementById('file-inp').value=''">×</button></span>`;
+    if(!document.getElementById('imp-title').value) document.getElementById('imp-title').value=file.name.replace(/\.[^.]+$/,'');
+  };
+  r.readAsText(file);
+}
+
+async function runImport() {
+  const raw=document.getElementById('imp-text').value.trim();
+  if(!raw){alert('Please paste or upload meeting notes first.');return;}
+  const btn=document.getElementById('imp-btn');btn.disabled=true;btn.textContent='Analysing…';
+  const statusEl=document.getElementById('imp-status');
+  statusEl.innerHTML=`<div class="ai-status-box"><div class="spinner"></div><span id="imp-msg">Claude is reading your notes…</span></div>`;
+  const norm=normaliseText(raw);
+  const dept=document.getElementById('imp-dept').value;
+  const source=document.getElementById('imp-source').value;
+  const prompt=`You are a meeting intelligence assistant for Malam Jabba Ski Resort (MJSR), Pakistan, operated by the Samsons Group. You process notes from MS Teams Read AI (structured: chapters, action items) or Samsung Notes voice summariser (free-form: agendas with bullet arrows).${dept?' Department context: '+dept+'.':''}
+
+Return ONLY valid JSON with this exact structure (no markdown, no extra text):
+{
+  "summary": "2-4 sentence plain English summary of what was discussed and decided",
+  "keyPoints": ["up to 5 key decisions or points"],
+  "suggestedDept": "one of: Operations, Finance, HR, Sales, Admin, Technical, Management, Other",
+  "tasks": [
+    {
+      "text": "specific actionable task description",
+      "assignee": "first name only, or empty string",
+      "department": "one of: Operations, Finance, HR, Sales, Admin, Technical, Management, Other",
+      "due": "YYYY-MM-DD only if explicitly stated, else empty string",
+      "priority": "high, medium, or low",
+      "notes": "any important context or caveat for this task, or empty string"
+    }
+  ]
+}
+
+Extract EVERY action item. For Samsung Notes format look for bullet arrows (=>), agenda items, and implied actions. Assignee = first name only.
+
+Meeting notes:
+${norm}`;
+
+  try {
+    document.getElementById('imp-msg').textContent='Extracting tasks and summary…';
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2000,messages:[{role:'user',content:prompt}]})});
+    const data=await resp.json();
+    const text=data.content.map(c=>c.text||'').join('');
+    const parsed=JSON.parse(text.replace(/```json|```/g,'').trim());
+    document.getElementById('imp-msg').textContent='Saving to database…';
+
+    const title=document.getElementById('imp-title').value.trim()||(parsed.suggestedDept+' Meeting');
+    const date=document.getElementById('imp-date').value||new Date().toISOString().slice(0,10);
+    const finalDept=dept||parsed.suggestedDept||'Other';
+    const mId='m'+Date.now();
+
+    db.meetings.push({id:mId,title,date,source,dept:finalDept,summary:parsed.summary,rawText:raw,keyPoints:parsed.keyPoints||[]});
+    const newTasks=[];
+    (parsed.tasks||[]).forEach(t=>{
+      const r=resolveAlias(t.assignee||'');
+      newTasks.push({id:uid(),text:t.text,assignee:r.name,dept:t.department||finalDept,status:'pending',due:t.due||'',notes:t.notes||'',meetingId:mId,aliasResolved:r.resolved,aliasFrom:r.from,priority:t.priority||'medium'});
+    });
+    db.tasks.push(...newTasks);
+    saveDB();
+    statusEl.innerHTML='';
+    const corrected=newTasks.filter(t=>t.aliasResolved);
+
+    document.getElementById('imp-preview').innerHTML=`
+      <div class="success-banner">${newTasks.length} tasks extracted and saved from: <strong>${title}</strong></div>
+      ${corrected.length?`<div class="info-banner"><span>&#10003;</span><span>Name corrections applied: ${corrected.map(t=>`"${t.aliasFrom}" → ${t.assignee}`).join(' · ')}</span></div>`:''}
+      ${parsed.keyPoints&&parsed.keyPoints.length?`<div class="import-kp-box"><div class="kp-label">Key points</div>${parsed.keyPoints.map(k=>`<div class="kp-item">— ${k}</div>`).join('')}</div>`:''}
+      <div class="task-list">${newTasks.map(t=>`<div class="task-card ${pClass(t.priority||'medium')}"><div class="task-text">${t.text}</div><div class="task-meta">${t.assignee?`<span class="badge b-date">${t.assignee}</span>`:''} ${statusBadge('pending')} ${deptPill(t.dept)} ${t.notes?`<span class="badge b-date">${t.notes.slice(0,60)}…</span>`:''}</div></div>`).join('')}</div>
+      <div style="margin-top:14px;display:flex;gap:8px;">
+        <button class="btn btn-primary" onclick="showPage('dashboard',null)">View dashboard</button>
+        <button class="btn" onclick="showPage('meetings',null)">View meeting log</button>
+      </div>`;
+    btn.disabled=false;btn.textContent='Analyse with Claude AI';
+  } catch(err) {
+    statusEl.innerHTML=`<div class="warn-banner">Error: ${err.message}. Check your notes and try again.</div>`;
+    btn.disabled=false;btn.textContent='Analyse with Claude AI';
+  }
+}
+
+/* ── CEO VIEW ── */
+function renderCEO() {
+  setTopbarActions(`
+    <div class="ceo-toggle">
+      <button class="ceo-toggle-btn ${ceoView==='list'?'active':''}" onclick="ceoView='list';renderCEO()">List</button>
+      <button class="ceo-toggle-btn ${ceoView==='dept'?'active':''}" onclick="ceoView='dept';renderCEO()">By dept</button>
+      <button class="ceo-toggle-btn ${ceoView==='report'?'active':''}" onclick="ceoView='report';renderCEO()">Formal report</button>
+    </div>
+    <button class="btn btn-sm no-print" onclick="copyCEOText()">Copy as text</button>
+    <button class="btn btn-sm no-print" onclick="window.print()">Print / PDF</button>`);
+
+  const tasks=db.tasks;
+  const complete=tasks.filter(t=>t.status==='complete');
+  const pending=tasks.filter(t=>t.status==='pending'||t.status==='wip');
+  const blocked=tasks.filter(t=>t.status==='blocked');
+  const dc={};
+  tasks.forEach(t=>{const d=t.dept||'Other';if(!dc[d])dc[d]={total:0,complete:0,pending:0,blocked:0};dc[d].total++;if(t.status==='complete')dc[d].complete++;else if(t.status==='blocked')dc[d].blocked++;else dc[d].pending++;});
+
+  let html = '';
+
+  if (ceoView==='list') {
+    html=`
+      <div class="metrics-grid">
+        <div class="metric-card"><div class="metric-label">Completed</div><div class="metric-value mv-complete">${complete.length}</div><div class="metric-sub">${tasks.length>0?Math.round(complete.length/tasks.length*100):0}% of total</div></div>
+        <div class="metric-card"><div class="metric-label">Pending / In progress</div><div class="metric-value mv-pending">${pending.length}</div><div class="metric-sub">across ${db.meetings.length} meetings</div></div>
+        <div class="metric-card"><div class="metric-label">Blocked</div><div class="metric-value mv-blocked">${blocked.length}</div><div class="metric-sub">require decision</div></div>
+        <div class="metric-card"><div class="metric-label">Total tracked</div><div class="metric-value mv-total">${tasks.length}</div><div class="metric-sub">all departments</div></div>
+      </div>
+      <div class="section"><div class="section-head">Completed</div>${complete.length?`<div class="task-list">${complete.map(t=>taskCardHtml(t,true)).join('')}</div>`:'<div class="empty-state">No completed tasks yet.</div>'}</div>
+      <div class="section"><div class="section-head">Pending &amp; in progress</div>${pending.length?`<div class="task-list">${pending.map(t=>taskCardHtml(t,true)).join('')}</div>`:'<div class="empty-state">None.</div>'}</div>
+      <div class="section"><div class="section-head">Blocked — require decision</div>${blocked.length?`<div class="task-list">${blocked.map(t=>taskCardHtml(t,true)).join('')}</div>`:'<div class="empty-state">None.</div>'}</div>`;
+
+  } else if (ceoView==='dept') {
+    html=`<div class="ceo-layout">`;
+    DEPTS.forEach(dept=>{
+      const dt=tasks.filter(t=>t.dept===dept);if(!dt.length)return;
+      const dc2=dt.filter(t=>t.status==='complete').length;
+      const pct=Math.round(dc2/dt.length*100);
+      html+=`<div class="card">
+        <div class="card-header"><div class="card-title">${deptPill(dept)}</div><div style="font-size:12px;color:var(--text3)">${dc2}/${dt.length} done</div></div>
+        <div class="card-body">
+          <div style="background:var(--surface2);border-radius:2px;height:5px;margin-bottom:12px;overflow:hidden;"><div style="height:100%;background:var(--green);border-radius:2px;width:${pct}%"></div></div>
+          <div class="task-list">${dt.map(t=>taskCardHtml(t,true)).join('')}</div>
+        </div>
+      </div>`;
+    });
+    html+='</div>';
+
+  } else {
+    const dateStr=new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
+    html=`<div class="report-formal">
+      <div class="report-formal-header">
+        <div class="report-formal-logo">Malam Jabba Ski Resort</div>
+        <div class="report-formal-sub">Samsons Group of Companies</div>
+        <div class="report-formal-date">Operations update — ${dateStr}</div>
+      </div>
+      <div class="report-section">
+        <div class="report-section-title">Summary</div>
+        <div class="report-stat-row">
+          <div class="report-stat"><div class="report-stat-val" style="color:var(--green)">${complete.length}</div><div class="report-stat-lbl">Completed</div></div>
+          <div class="report-stat"><div class="report-stat-val" style="color:var(--red)">${pending.length}</div><div class="report-stat-lbl">Pending / in progress</div></div>
+          <div class="report-stat"><div class="report-stat-val" style="color:var(--amber)">${blocked.length}</div><div class="report-stat-lbl">Blocked</div></div>
+          <div class="report-stat"><div class="report-stat-val">${tasks.length}</div><div class="report-stat-lbl">Total</div></div>
+        </div>
+      </div>
+      <div class="report-section">
+        <div class="report-section-title">Progress by department</div>
+        ${Object.entries(dc).map(([d,s])=>`<div class="dept-progress-item"><span style="width:130px;flex-shrink:0;">${deptPill(d)}</span><div class="dept-bar-wrap"><div class="dept-bar-fill" style="width:${s.total?Math.round(s.complete/s.total*100):0}%"></div></div><span style="font-size:12px;color:var(--text3);width:90px;text-align:right;">${s.complete}/${s.total} done</span>${s.blocked?`<span class="badge b-blocked" style="margin-left:8px;">${s.blocked} blocked</span>`:''}</div>`).join('')}
+      </div>
+      <div class="report-section">
+        <div class="report-section-title">Completed tasks</div>
+        ${complete.map(t=>`<div style="padding:5px 0;border-bottom:1px solid var(--border);font-size:13px;display:flex;gap:10px;align-items:baseline;"><span style="color:var(--green);font-weight:600;">✓</span> ${t.text}${t.assignee?` <span style="color:var(--text3);font-size:11px;">(${t.assignee})</span>`:''}${deptPill(t.dept)}</div>`).join('')||'<div style="font-size:13px;color:var(--text3);">None yet.</div>'}
+      </div>
+      <div class="report-section">
+        <div class="report-section-title">Pending &amp; in progress</div>
+        ${pending.map(t=>`<div style="padding:5px 0;border-bottom:1px solid var(--border);font-size:13px;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;"><span style="color:var(--text3);">○</span> ${t.text}${t.assignee?` <span style="color:var(--text3);font-size:11px;">(${t.assignee})</span>`:''}${deptPill(t.dept)}${dueBadge(t)}</div>`).join('')||'<div style="font-size:13px;color:var(--text3);">None.</div>'}
+      </div>
+      ${blocked.length?`<div class="report-section">
+        <div class="report-section-title">Blocked — require decision</div>
+        ${blocked.map(t=>`<div style="padding:5px 0;border-bottom:1px solid var(--border);font-size:13px;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;"><span style="color:var(--amber);font-weight:600;">!</span> ${t.text}${t.assignee?` <span style="color:var(--text3);font-size:11px;">(${t.assignee})</span>`:''}${deptPill(t.dept)}</div>`).join('')}
+      </div>`:''}
+      <div style="margin-top:32px;padding-top:16px;border-top:2px solid var(--text);font-size:11px;color:var(--text3);">Prepared by: Martin Schultz, General Manager · MJSR Meeting Intelligence Hub · ${dateStr}</div>
+    </div>`;
+  }
+  document.getElementById('content-area').innerHTML = html;
+}
+
+function copyCEOText() {
+  const tasks=db.tasks;
+  const complete=tasks.filter(t=>t.status==='complete'),pending=tasks.filter(t=>t.status==='pending'||t.status==='wip'),blocked=tasks.filter(t=>t.status==='blocked');
+  const lines=[
+    `MJSR OPERATIONS UPDATE — ${new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})}`,``,
+    `OVERVIEW`,`Total tasks tracked: ${tasks.length} (across ${db.meetings.length} meetings)`,`Completed: ${complete.length}`,`Pending / In progress: ${pending.length}`,`Blocked: ${blocked.length}`,``,
+    `COMPLETED`,...(complete.length?complete.map(t=>`  [✓] ${t.text}${t.assignee?' ('+t.assignee+')':''}${t.dept?' ['+t.dept+']':''}`):['  None']),``,
+    `PENDING / IN PROGRESS`,...(pending.length?pending.map(t=>`  [ ] ${t.text}${t.assignee?' ('+t.assignee+')':''}${t.dept?' ['+t.dept+']':''}${t.due?' — due '+fmtDate(t.due):''}`):['  None']),``,
+    `BLOCKED — REQUIRES DECISION`,...(blocked.length?blocked.map(t=>`  [!] ${t.text}${t.assignee?' ('+t.assignee+')':''}${t.dept?' ['+t.dept+']':''}`):['  None'])
+  ];
+  navigator.clipboard.writeText(lines.join('\n')).then(()=>{
+    const b=document.querySelector('.topbar-actions .btn-sm');if(b){b.textContent='Copied!';setTimeout(()=>b.textContent='Copy as text',2200);}
+  });
+}
+
+/* ── ALIASES ── */
+function renderAliases() {
+  setTopbarActions('');
+  document.getElementById('content-area').innerHTML=`
+    <div style="max-width:700px;">
+      <div class="info-banner"><span>&#9432;</span><span>When notes are imported, every detected name is checked against this table. Matches are silently corrected to the canonical name, and a "was …" badge appears on the task for traceability.</span></div>
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-header"><div class="card-title">Name alias table</div></div>
+        <table class="alias-table" id="alias-tbl"><thead><tr><th>Correct name</th><th>AI may write it as</th><th></th></tr></thead><tbody id="alias-body"></tbody></table>
+        <div style="padding:14px 16px;border-top:1px solid var(--border);">
+          <div class="form-row">
+            <div class="form-col"><label class="form-label">Correct name</label><input type="text" class="form-input" id="al-canon" placeholder="e.g. Momin"></div>
+            <div class="form-col" style="flex:2;"><label class="form-label">Aliases (comma separated)</label><input type="text" class="form-input" id="al-variants" placeholder="e.g. Moorman, Moeman, Momeen"></div>
+            <div style="align-self:flex-end;"><button class="btn btn-primary" onclick="addAlias()">Add</button></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Test the alias engine</div></div>
+        <div class="card-body">
+          <div class="form-row">
+            <div class="form-col"><input type="text" class="form-input" id="al-test" placeholder="Type a name as the AI might mishear it…"></div>
+            <div><button class="btn" onclick="testAlias()">Test</button></div>
+          </div>
+          <div id="al-result" style="margin-top:10px;"></div>
+        </div>
+      </div>
+    </div>`;
+  renderAliasRows();
+}
+function renderAliasRows() {
+  const tbody=document.getElementById('alias-body');if(!tbody)return;
+  tbody.innerHTML=db.aliases.length?db.aliases.map(e=>`<tr><td style="font-weight:500;">${e.canonical}</td><td>${e.variants.map(v=>`<span class="alias-tag">${v}</span>`).join('')}</td><td style="text-align:right;"><button class="btn btn-sm btn-danger" onclick="delAlias('${e.id}')">Remove</button></td></tr>`).join(''):`<tr><td colspan="3" style="text-align:center;color:var(--text3);padding:20px;">No aliases yet.</td></tr>`;
+}
+function addAlias() {
+  const c=document.getElementById('al-canon').value.trim(),v=document.getElementById('al-variants').value.trim();
+  if(!c||!v){alert('Please fill in both fields.');return;}
+  const variants=v.split(',').map(x=>x.trim()).filter(Boolean);
+  const ex=db.aliases.find(a=>a.canonical.toLowerCase()===c.toLowerCase());
+  if(ex)ex.variants=[...new Set([...ex.variants,...variants])];
+  else db.aliases.push({id:'a'+Date.now(),canonical:c,variants});
+  document.getElementById('al-canon').value='';document.getElementById('al-variants').value='';
+  saveDB();renderAliasRows();
+}
+function delAlias(id){db.aliases=db.aliases.filter(a=>a.id!==id);saveDB();renderAliasRows();}
+function testAlias(){
+  const raw=document.getElementById('al-test').value.trim();
+  const res=resolveAlias(raw);
+  const el=document.getElementById('al-result');if(!raw){el.innerHTML='';return;}
+  el.innerHTML=res.resolved?`<div class="success-banner">"${raw}" → will be corrected to <strong>${res.name}</strong></div>`:`<div class="info-banner"><span>—</span><span>"${raw}" has no alias match and will be saved as-is.</span></div>`;
+}
+
+/* ── SETTINGS ── */
+function renderSettings() {
+  setTopbarActions('');
+  const currentUrl = SCRIPT_URL || '';
+  const isConnected = !!currentUrl;
+  document.getElementById('content-area').innerHTML=`
+    <div style="max-width:600px;">
+
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-header">
+          <div class="card-title">Google Sheets connection</div>
+          <span class="badge ${isConnected ? 'b-complete' : 'b-pending'}">${isConnected ? 'Connected' : 'Not connected'}</span>
+        </div>
+        <div class="card-body">
+          <p style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.6;">
+            Connect to Google Sheets so your data persists across all devices and sessions. Follow the setup steps in the SOP document, then paste your Apps Script deployment URL below.
+          </p>
+          <label class="form-label">Apps Script deployment URL</label>
+          <input type="text" class="form-input" id="sett-url" value="${currentUrl}" placeholder="https://script.google.com/macros/s/AKfy.../exec" style="margin-bottom:10px;font-size:12px;">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-primary" onclick="saveScriptURL()">Connect &amp; test</button>
+            ${isConnected ? '<button class="btn" onclick="pushToSheets(null,{action:'syncAll',data:db}).then(()=>alert('Full sync complete.'))">Force full sync</button>' : ''}
+            ${isConnected ? '<button class="btn btn-danger btn-sm" onclick="SCRIPT_URL=\'\';localStorage.removeItem(\'mjsr_script_url\');setSyncStatus(\'local\');renderSettings()">Disconnect</button>' : ''}
+          </div>
+          <div style="margin-top:12px;padding:10px 14px;background:var(--surface2);border-radius:var(--radius-sm);font-size:12px;color:var(--text3);line-height:1.7;">
+            <strong>Setup steps:</strong><br>
+            1. Create a new Google Sheet and copy the Sheet ID from the URL<br>
+            2. Open Apps Script (Extensions &rarr; Apps Script), paste the MeetingHub_AppScript.js code<br>
+            3. Replace <code>YOUR_SHEET_ID_HERE</code> with your Sheet ID<br>
+            4. Run <code>setupSheets()</code> once to create all tabs<br>
+            5. Deploy as Web App: Execute as Me &rarr; Anyone with link &rarr; Deploy<br>
+            6. Copy the deployment URL and paste it above
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-header"><div class="card-title">Data management</div></div>
+        <div class="card-body">
+          <p style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.6;">Export a JSON backup of all your data at any time. You can restore it on any device.</p>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <button class="btn btn-primary" onclick="exportData()">Export backup (JSON)</button>
+            <button class="btn" onclick="document.getElementById('imp-file-settings').click()">Import backup</button>
+            <input type="file" id="imp-file-settings" accept=".json" style="display:none" onchange="importBackup(event)">
+            <button class="btn btn-danger" onclick="clearAllData()">Clear all data</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-header"><div class="card-title">Organisation defaults</div></div>
+        <div class="card-body">
+          <div class="form-row">
+            <div class="form-col"><label class="form-label">Organisation name</label><input type="text" class="form-input" id="sett-org" value="Malam Jabba Ski Resort"></div>
+            <div class="form-col"><label class="form-label">Report prepared by</label><input type="text" class="form-input" id="sett-gm" value="Martin Schultz, General Manager"></div>
+          </div>
+          <button class="btn btn-primary btn-sm" style="margin-top:10px;" onclick="alert('Saved.')">Save</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><div class="card-title">About</div></div>
+        <div class="card-body">
+          <p style="font-size:13px;color:var(--text2);line-height:1.6;">
+            MJSR Meeting Intelligence Hub v2.0<br>
+            Built for Malam Jabba Ski Resort, Samsons Group of Companies.<br>
+            Supports MS Teams / Read AI and Samsung Notes formats.<br>
+            Google Sheets backend · localStorage fallback · AI-powered extraction.
+          </p>
+        </div>
+      </div>
+    </div>`;
+}
+
+function exportData() {
+  const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`MJSR_Hub_Backup_${new Date().toISOString().slice(0,10)}.json`;a.click();
+}
+function importBackup(e) {
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();r.onload=ev=>{try{db=JSON.parse(ev.target.result);saveDB();alert('Backup restored successfully.');showPage('dashboard',null);}catch(err){alert('Invalid backup file.');}};r.readAsText(f);
+}
+
+/* ── INIT ── */
+loadDB();
+DEPTS.forEach(d=>{ try{document.getElementById('tm-dept').innerHTML+='<option>'+d+'</option>';}catch(e){} });
+renderDashboard();
+</script>
+</body>
+</html>
