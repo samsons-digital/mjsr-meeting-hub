@@ -471,6 +471,47 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   </div>
 </div>
 
+<!-- MODAL: Edit Meeting -->
+<div class="modal-overlay" id="mtg-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Edit meeting</div>
+      <button class="modal-close" onclick="closeModal('mtg-modal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-section">
+        <label class="form-label">Meeting title</label>
+        <input type="text" class="form-input" id="mm-title" placeholder="e.g. Weekly ops review">
+      </div>
+      <div class="form-row">
+        <div class="form-col">
+          <label class="form-label">Date</label>
+          <input type="date" class="form-input" id="mm-date">
+        </div>
+        <div class="form-col">
+          <label class="form-label">Source</label>
+          <select class="form-select" id="mm-source">
+            <option>MS Teams / Read AI</option>
+            <option>Samsung Notes</option>
+            <option>Manual</option>
+          </select>
+        </div>
+        <div class="form-col">
+          <label class="form-label">Department</label>
+          <select class="form-select" id="mm-dept">
+            <option value="">— select —</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger btn-sm" onclick="deleteMeetingModal()" style="margin-right:auto;">Delete meeting</button>
+      <button class="btn" onclick="closeModal('mtg-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveMeetingModal()">Save changes</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const DEPTS = ['Operations','Finance','HR','Sales','Marketing','Admin','Technical','Management','Other'];
 const DEPT_CLASS = {Operations:'d-Operations',Finance:'d-Finance',HR:'d-HR',Sales:'d-Sales',Admin:'d-Admin',Technical:'d-Technical',Marketing:'d-Marketing',Management:'d-Management',Other:'d-Other'};
@@ -929,6 +970,7 @@ function renderMeetingList(q) {
           <div class="meeting-meta-row" style="margin-top:4px;">${m.date}${srcPill(m.source)}${deptPill(m.dept)}</div>
         </div>
         <div class="mtg-task-summary">${pendingLabel}</div>
+        <button class="btn btn-icon btn-sm no-print" title="Edit meeting" onclick="event.stopPropagation();openEditMeeting('${m.id}')" style="flex-shrink:0;"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M11 2l3 3-8 8H3v-3l8-8z"/></svg></button>
         ${chevron}
       </div>
       <div class="meeting-card-body">
@@ -946,6 +988,50 @@ function renderMeetingList(q) {
 function toggleMeeting(id) {
   const card = document.getElementById('mc-'+id);
   if (card) card.classList.toggle('open');
+}
+
+function openEditMeeting(id) {
+  const m = db.meetings.find(m=>m.id===id);
+  if (!m) return;
+  document.getElementById('mm-title').value = m.title || '';
+  document.getElementById('mm-date').value  = m.date  || '';
+  document.getElementById('mm-source').value = m.source || 'MS Teams / Read AI';
+  // Populate dept select
+  const ds = document.getElementById('mm-dept');
+  ds.innerHTML = '<option value="">— select —</option>' + DEPTS.map(d=>`<option value="${d}" ${m.dept===d?'selected':''}>${d}</option>`).join('');
+  document.getElementById('mtg-modal').dataset.editId = id;
+  document.getElementById('mtg-modal').classList.add('open');
+}
+
+function saveMeetingModal() {
+  const id = document.getElementById('mtg-modal').dataset.editId;
+  const m  = db.meetings.find(m=>m.id===id);
+  if (!m) return;
+  const title = document.getElementById('mm-title').value.trim();
+  if (!title) { alert('Please enter a meeting title.'); return; }
+  m.title  = title;
+  m.date   = document.getElementById('mm-date').value;
+  m.source = document.getElementById('mm-source').value;
+  m.dept   = document.getElementById('mm-dept').value;
+  saveDB();
+  closeModal('mtg-modal');
+  renderMeetingList(document.getElementById('mtg-search')?.value || '');
+}
+
+function deleteMeetingModal() {
+  const id = document.getElementById('mtg-modal').dataset.editId;
+  const m  = db.meetings.find(m=>m.id===id);
+  if (!m) return;
+  const taskCount = db.tasks.filter(t=>t.meetingId===id).length;
+  const msg = taskCount > 0
+    ? `Delete "${m.title}" and its ${taskCount} task${taskCount>1?'s':''}? This cannot be undone.`
+    : `Delete "${m.title}"? This cannot be undone.`;
+  if (!confirm(msg)) return;
+  db.meetings = db.meetings.filter(m=>m.id!==id);
+  db.tasks    = db.tasks.filter(t=>t.meetingId!==id);
+  saveDB();
+  closeModal('mtg-modal');
+  renderMeetingList('');
 }
 
 /* ── IMPORT ── */
