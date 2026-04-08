@@ -393,6 +393,10 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="5" r="3"/><path d="M1 14c0-3 2-4 5-4s5 1 5 4"/><path d="M11 2c1.5.5 2.5 1.8 2.5 3.5s-1 3-2.5 3.5M13.5 11c1 .3 2 1 2 3"/></svg>
       Name aliases
     </button>
+    <button class="nav-item" onclick="showPage('sheet',this)">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="14" height="14" rx="1.5"/><path d="M1 5h14M5 5v10M5 8h9M5 11h9"/></svg>
+      Google Sheet
+    </button>
     <button class="nav-item" onclick="showPage('settings',this)">
       <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="2"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.5 1.5M11.5 11.5 13 13M3 13l1.5-1.5M11.5 4.5 13 3"/></svg>
       Settings
@@ -744,13 +748,13 @@ function dueBadge(t) {
 }
 
 /* ── PAGE ROUTING ── */
-const PAGE_TITLES = {dashboard:'Dashboard',tasks:'Tasks',meetings:'Meeting log',import:'Import meeting',ceo:'CEO / Finance view',aliases:'Name aliases',settings:'Settings'};
+const PAGE_TITLES = {dashboard:'Dashboard',tasks:'Tasks',meetings:'Meeting log',import:'Import meeting',ceo:'CEO / Finance view',aliases:'Name aliases',sheet:'Google Sheet',settings:'Settings'};
 function showPage(name, btn) {
   document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
   if (btn) btn.classList.add('active');
   else { const b=document.querySelector(`[onclick*="'${name}'"]`); if(b)b.classList.add('active'); }
   document.getElementById('page-title').textContent = PAGE_TITLES[name]||name;
-  const pages = {dashboard:renderDashboard,tasks:renderTasksPage,meetings:renderMeetings,import:renderImport,ceo:renderCEO,aliases:renderAliases,settings:renderSettings};
+  const pages = {dashboard:renderDashboard,tasks:renderTasksPage,meetings:renderMeetings,import:renderImport,ceo:renderCEO,aliases:renderAliases,sheet:renderSheet,settings:renderSettings};
   if(pages[name]) pages[name]();
 }
 
@@ -1332,6 +1336,106 @@ function testAlias(){
 }
 
 /* ── SETTINGS ── */
+function renderSheet() {
+  setTopbarActions('');
+  const sheetUrl = localStorage.getItem('mjsr_sheet_url') || '';
+  const isSet = !!sheetUrl;
+  document.getElementById('content-area').innerHTML = `
+    <div style="max-width:640px;">
+
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-header">
+          <div class="card-title">Google Sheet</div>
+          <span class="badge ${isSet ? 'b-complete' : 'b-pending'}">${isSet ? 'URL saved' : 'Not set'}</span>
+        </div>
+        <div class="card-body">
+          <p style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.6;">
+            Save your Google Sheet URL here for quick access. All four tabs — Meetings, Tasks, Name_Aliases and Activity_Log — are visible directly in the Sheet.
+          </p>
+          <label class="form-label">Google Sheet URL</label>
+          <input type="text" class="form-input" id="sheet-url-input" value="${sheetUrl}"
+            placeholder="https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit"
+            style="margin-bottom:10px;font-size:12px;">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-primary" onclick="saveSheetUrl()">Save URL</button>
+            ${isSet ? `<button class="btn btn-gold" onclick="openSheet()" style="display:inline-flex;align-items:center;gap:6px;">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 2H2a1 1 0 00-1 1v11a1 1 0 001 1h11a1 1 0 001-1V9M10 1h5v5M6 10L15 1"/></svg>
+              Open Google Sheet
+            </button>` : ''}
+          </div>
+        </div>
+      </div>
+
+      ${isSet ? `
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-header"><div class="card-title">Sheet tabs</div></div>
+        <div class="card-body" style="padding:0;">
+          ${['Meetings','Tasks','Name_Aliases','Activity_Log'].map((tab,i) => `
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:${i<3?'1px solid var(--border)':'none'};">
+            <div>
+              <div style="font-size:13px;font-weight:500;">${tab.replace('_',' ')}</div>
+              <div style="font-size:11px;color:var(--text3);margin-top:2px;">${
+                tab==='Meetings'?'One row per imported meeting':
+                tab==='Tasks'?'All tasks with status, assignee, department':
+                tab==='Name_Aliases'?'Canonical names and all AI variants':
+                'Timestamped log of every create, update, delete'
+              }</div>
+            </div>
+            <button class="btn btn-sm" onclick="openSheetTab('${tab}')" style="display:inline-flex;align-items:center;gap:5px;">
+              <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 2H2a1 1 0 00-1 1v11a1 1 0 001 1h11a1 1 0 001-1V9M10 1h5v5M6 10L15 1"/></svg>
+              Open
+            </button>
+          </div>`).join('')}
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><div class="card-title">Quick stats from local data</div></div>
+        <div class="card-body">
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
+            <div style="text-align:center;padding:10px;background:var(--surface2);border-radius:var(--radius-sm);">
+              <div style="font-size:24px;font-weight:300;font-family:'DM Serif Display',serif;">${db.meetings.length}</div>
+              <div style="font-size:11px;color:var(--text3);margin-top:2px;">Meetings</div>
+            </div>
+            <div style="text-align:center;padding:10px;background:var(--surface2);border-radius:var(--radius-sm);">
+              <div style="font-size:24px;font-weight:300;font-family:'DM Serif Display',serif;">${db.tasks.length}</div>
+              <div style="font-size:11px;color:var(--text3);margin-top:2px;">Tasks</div>
+            </div>
+            <div style="text-align:center;padding:10px;background:var(--surface2);border-radius:var(--radius-sm);">
+              <div style="font-size:24px;font-weight:300;font-family:'DM Serif Display',serif;">${db.aliases.length}</div>
+              <div style="font-size:11px;color:var(--text3);margin-top:2px;">Name aliases</div>
+            </div>
+          </div>
+        </div>
+      </div>` : `
+      <div class="info-banner">
+        <span>&#9432;</span>
+        <span>Paste your Google Sheet URL above and click Save URL to enable quick access to all four sheet tabs from here.</span>
+      </div>`}
+    </div>`;
+}
+
+function saveSheetUrl() {
+  const url = document.getElementById('sheet-url-input').value.trim();
+  if (!url) { alert('Please enter your Google Sheet URL first.'); return; }
+  localStorage.setItem('mjsr_sheet_url', url);
+  renderSheet();
+}
+
+function openSheet() {
+  const url = localStorage.getItem('mjsr_sheet_url');
+  if (url) window.open(url, '_blank');
+}
+
+function openSheetTab(tabName) {
+  let url = localStorage.getItem('mjsr_sheet_url') || '';
+  if (!url) { alert('No Sheet URL saved. Add it above first.'); return; }
+  // Strip any existing gid or anchor and append the tab name as a fragment
+  url = url.split('#')[0].split('?')[0];
+  // Open with tab name as search param so Google Sheets activates the right tab
+  window.open(url + '#gid=0&range=' + tabName + '!A1', '_blank');
+}
+
 function renderSettings() {
   setTopbarActions('');
   const currentUrl = SCRIPT_URL || '';
