@@ -588,14 +588,22 @@ async function loadDB() {
     try {
       const resp = await fetch(SCRIPT_URL + '?action=getAll', { method: 'GET' });
       const result = await resp.json();
-      if (result.meetings && result.tasks && result.aliases) {
-        db.meetings = result.meetings;
-        db.tasks    = result.tasks;
-        db.aliases  = result.aliases;
+      if (result.meetings && result.tasks) {
+        // Merge: keep local items not yet in Sheets
+        const sheetMtgIds  = new Set(result.meetings.map(m=>m.id));
+        const sheetTaskIds = new Set(result.tasks.map(t=>t.id));
+        const missingMtgs  = db.meetings.filter(m=>!sheetMtgIds.has(m.id));
+        const missingTasks = db.tasks.filter(t=>!sheetTaskIds.has(t.id));
+        db.meetings = [...result.meetings, ...missingMtgs];
+        db.tasks    = [...result.tasks,    ...missingTasks];
+        if (result.aliases && result.aliases.length) db.aliases = result.aliases;
         localStorage.setItem('mjsr_hub_db', JSON.stringify(db));
         setSyncStatus('synced');
         renderCurrentPage();
         updateNavBadge();
+        // Push any missing local items to Sheets silently
+        if (missingMtgs.length)   missingMtgs.forEach(m=>pushToSheets(null,{action:'saveMeeting',data:m}));
+        if (missingTasks.length)  pushToSheets(null,{action:'bulkSaveTasks',tasks:missingTasks});
       }
     } catch(err) {
       setSyncStatus('error', 'Sheets unavailable — using local data');
@@ -1418,23 +1426,51 @@ function doForceSync() {
 
 async function refreshFromSheets() {
   if (!SCRIPT_URL) { alert('No Sheets connection. Go to Settings and connect first.'); return; }
-  setSyncStatus('syncing', 'Pulling latest from Sheets…');
+  setSyncStatus('syncing', 'Syncing with Sheets…');
   try {
+    // Step 1 — push any local items that Sheets may not have yet
+    const localMtgIds  = new Set(db.meetings.map(m=>m.id));
+    const localTaskIds = new Set(db.tasks.map(t=>t.id));
+
+    // Step 2 — pull latest from Sheets
     const resp = await fetch(SCRIPT_URL + '?action=getAll', { method: 'GET' });
     const result = await resp.json();
-    if (result.meetings && result.tasks && result.aliases) {
-      db.meetings = result.meetings;
-      db.tasks    = result.tasks;
-      db.aliases  = result.aliases;
-      localStorage.setItem('mjsr_hub_db', JSON.stringify(db));
-      setSyncStatus('synced');
-      renderCurrentPage();
-      updateNavBadge();
-      alert('Dashboard refreshed — ' + db.tasks.length + ' tasks loaded from Sheets.');
+    if (!result.meetings) throw new Error('Invalid response from Sheets');
+
+    const sheetMtgIds  = new Set(result.meetings.map(m=>m.id));
+    const sheetTaskIds = new Set(result.tasks.map(t=>t.id));
+
+    // Step 3 — merge: keep anything local that Sheets doesn't have yet
+    const missingMeetings = db.meetings.filter(m => !sheetMtgIds.has(m.id));
+    const missingTasks    = db.tasks.filter(t => !sheetTaskIds.has(t.id));
+
+    // Step 4 — build merged dataset (Sheets is source of truth, local fills gaps)
+    db.meetings = [...result.meetings, ...missingMeetings];
+    db.tasks    = [...result.tasks,    ...missingTasks];
+    db.aliases  = result.aliases.length ? result.aliases : db.aliases;
+
+    // Step 5 — if there were local items Sheets was missing, push them up now
+    if (missingMeetings.length > 0) {
+      for (const m of missingMeetings) {
+        await pushToSheets(null, { action:'saveMeeting', data:m });
+      }
     }
+    if (missingTasks.length > 0) {
+      await pushToSheets(null, { action:'bulkSaveTasks', tasks:missingTasks });
+    }
+
+    localStorage.setItem('mjsr_hub_db', JSON.stringify(db));
+    setSyncStatus('synced');
+    renderCurrentPage();
+    updateNavBadge();
+    const total = db.tasks.length;
+    const note  = (missingMeetings.length || missingTasks.length)
+      ? ` (${missingTasks.length} local task${missingTasks.length!==1?'s':''} pushed to Sheets)`
+      : '';
+    alert('Synced — ' + total + ' tasks' + note);
   } catch(err) {
-    setSyncStatus('error', 'Refresh failed');
-    alert('Could not reach Sheets. Check your connection.');
+    setSyncStatus('error', 'Sync failed — local data preserved');
+    alert('Could not reach Sheets. Your local data is safe. Try again shortly.');
   }
 }
 
