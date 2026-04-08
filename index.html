@@ -907,7 +907,10 @@ function renderTasksPage() {
       </select>
       <select class="filter-select" onchange="taskAssigneeFilter=this.value;renderTasksPage()">
         <option value="all">All people</option>
-        ${[...new Set(db.tasks.map(t=>t.assignee).filter(Boolean))].sort().map(a=>`<option value="${a}" ${taskAssigneeFilter===a?'selected':''}>${a}</option>`).join('')}
+        ${[...new Set([
+          ...db.aliases.map(a=>a.canonical),
+          ...db.tasks.map(t=>t.assignee).filter(Boolean)
+        ])].sort().filter(n=>db.tasks.some(t=>t.assignee===n)).map(a=>`<option value="${a}" ${taskAssigneeFilter===a?'selected':''}>${a}</option>`).join('')}
       </select>
     </div>
     ${filtered.length ? `<div class="task-list">${filtered.map(t=>taskCardHtml(t)).join('')}</div>` : '<div class="empty-state"><div class="empty-icon">✓</div><div>No tasks match your filters.</div></div>'}`;
