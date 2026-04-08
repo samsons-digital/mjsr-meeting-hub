@@ -156,8 +156,12 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .task-row { display: flex; align-items: flex-start; gap: 10px; }
 .task-cb { width: 15px; height: 15px; cursor: pointer; flex-shrink: 0; margin-top: 2px; accent-color: var(--green); }
 .task-body { flex: 1; min-width: 0; }
-.task-text { font-size: 13px; line-height: 1.5; }
-.task-text.struck { text-decoration: line-through; color: var(--text3); }
+.task-text { font-size: 13px; line-height: 1.5; cursor: pointer; }
+.task-text:hover { color: var(--gold); }
+.task-text.struck { text-decoration: line-through; color: var(--text3); cursor: pointer; }
+.task-detail { display: none; margin-top: 6px; }
+.task-card.expanded .task-detail { display: block; }
+.task-expand-hint { font-size: 11px; color: var(--text3); margin-top: 3px; display: none; }
 .task-meta { display: flex; align-items: center; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
 .task-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
 .task-notes-box { margin-top: 8px; padding: 8px 10px; background: var(--surface2); border-radius: var(--radius-sm); font-size: 12px; color: var(--text2); line-height: 1.5; }
@@ -831,33 +835,41 @@ function taskCardHtml(t, minimal=false) {
   const statSel = !minimal ? `<select class="mini-select" onchange="qChangeStatus('${t.id}',this.value)">${['pending','wip','complete','blocked'].map(s=>`<option value="${s}"${t.status===s?' selected':''}>${{pending:'Pending',wip:'In progress',complete:'Complete',blocked:'Blocked'}[s]}</option>`).join('')}</select>` : '';
   const deptSel = !minimal ? `<select class="mini-select" onchange="qChangeDept('${t.id}',this.value)"><option value="">Dept</option>${DEPTS.map(d=>`<option value="${d}"${t.dept===d?' selected':''}>${d}</option>`).join('')}</select>` : '';
 
+  // Compact summary line shown when collapsed
+  const assigneePart = t.assignee ? `<span class="badge b-date" style="font-size:11px;"><svg width="9" height="9" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:2px;vertical-align:middle;"><circle cx="8" cy="6" r="3"/><path d="M2 14c0-3 2.7-5 6-5s6 2 6 5"/></svg>${t.assignee}</span>` : '';
+  const collapsedMeta = `<div class="task-meta" style="margin-top:5px;">
+    ${statusBadge(t.status)}
+    ${assigneePart}
+    ${deptPill(t.dept)}
+    ${dueBadge(t)}
+  </div>`;
+
   return `<div class="task-card ${t.status==='complete'?'done':''} ${pClass(t.priority||'medium')}" id="tc-${t.id}">
     <div class="task-row">
       <input type="checkbox" class="task-cb" ${t.status==='complete'?'checked':''} onchange="qToggle('${t.id}',this.checked)">
-      <div class="task-body">
+      <div class="task-body" onclick="toggleTaskExpand('${t.id}')" style="cursor:pointer;">
         <div class="task-text ${t.status==='complete'?'struck':''}">${t.text}</div>
-        ${notesHtml}
-        <div class="task-meta">
-          ${statusBadge(t.status)}
-          ${t.assignee?`<span class="badge b-date"><svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:2px;vertical-align:middle;"><circle cx="8" cy="6" r="3"/><path d="M2 14c0-3 2.7-5 6-5s6 2 6 5"/></svg>${t.assignee}</span>`:''}
-          ${deptPill(t.dept)}
-          ${dueBadge(t)}
-          ${aliasBadge}
-          ${srcPillHtml}
-          ${mtgPill}
-          ${statSel}
-          ${deptSel}
-          ${!minimal?`<button class="note-toggle" onclick="toggleNoteEdit('${t.id}')">${t.notes?'edit note':'+ note'}</button>`:''}
-        </div>
-        <div id="note-edit-${t.id}" style="display:none;">
-          <textarea class="task-notes-input" id="note-input-${t.id}" placeholder="Add notes, blockers, context...">${t.notes||''}</textarea>
-          <div style="display:flex;gap:6px;margin-top:4px;">
-            <button class="btn btn-sm btn-primary" onclick="saveNote('${t.id}')">Save note</button>
-            <button class="btn btn-sm" onclick="document.getElementById('note-edit-${t.id}').style.display='none'">Cancel</button>
+        ${collapsedMeta}
+        <div class="task-detail">
+          ${notesHtml}
+          <div class="task-meta" style="margin-top:6px;">
+            ${aliasBadge}
+            ${srcPillHtml}
+            ${mtgPill}
+            ${statSel}
+            ${deptSel}
+            ${!minimal?`<button class="note-toggle" onclick="event.stopPropagation();toggleNoteEdit('${t.id}')">${t.notes?'edit note':'+ note'}</button>`:''}
+          </div>
+          <div id="note-edit-${t.id}" style="display:none;" onclick="event.stopPropagation()">
+            <textarea class="task-notes-input" id="note-input-${t.id}" placeholder="Add notes, blockers, context...">${t.notes||''}</textarea>
+            <div style="display:flex;gap:6px;margin-top:4px;">
+              <button class="btn btn-sm btn-primary" onclick="saveNote('${t.id}')">Save note</button>
+              <button class="btn btn-sm" onclick="document.getElementById('note-edit-${t.id}').style.display='none'">Cancel</button>
+            </div>
           </div>
         </div>
       </div>
-      <div class="task-actions">
+      <div class="task-actions" onclick="event.stopPropagation()">
         ${!minimal?`<button class="btn btn-icon btn-sm" title="Edit task" onclick="openEditTask('${t.id}')"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M11 2l3 3-8 8H3v-3l8-8z"/></svg></button>`:''}
         <button class="btn btn-icon btn-sm btn-danger" title="Remove" onclick="deleteTask('${t.id}')"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 4h12M5 4V2h6v2M6 7v5M10 7v5M3 4l1 10h8l1-10"/></svg></button>
       </div>
@@ -897,6 +909,11 @@ function renderTasksPage() {
 
 function setTFilter(f) { taskFilter=f; renderTasksPage(); }
 function qToggle(id,checked) { const t=db.tasks.find(t=>t.id===id);if(t){t.status=checked?'complete':'pending';saveDB();renderCurrentPage();}}
+
+function toggleTaskExpand(id) {
+  const card = document.getElementById('tc-'+id);
+  if (card) card.classList.toggle('expanded');
+}
 function qChangeStatus(id,val) { const t=db.tasks.find(t=>t.id===id);if(t){t.status=val;saveDB();renderCurrentPage();}}
 function qChangeDept(id,val) { const t=db.tasks.find(t=>t.id===id);if(t){t.dept=val;saveDB();renderCurrentPage();}}
 function deleteTask(id) { if(!confirm('Remove this task?'))return; db.tasks=db.tasks.filter(t=>t.id!==id);saveDB();renderCurrentPage();}
