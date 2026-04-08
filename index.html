@@ -529,6 +529,7 @@ let db = { meetings:[], tasks:[], aliases:[] };
 let taskFilter = 'all';
 let taskDeptFilter = 'all';
 let taskSrcFilter = 'all';
+let taskAssigneeFilter = 'all';
 let taskSearch = '';
 let editingTaskId = null;
 let ceoView = 'list';
@@ -886,6 +887,7 @@ function renderTasksPage() {
   if (taskFilter !== 'all') filtered = filtered.filter(t=>t.status===taskFilter);
   if (taskDeptFilter !== 'all') filtered = filtered.filter(t=>t.dept===taskDeptFilter);
   if (taskSrcFilter !== 'all') filtered = filtered.filter(t=>{const m=db.meetings.find(m=>m.id===t.meetingId);return m&&m.source===taskSrcFilter;});
+  if (taskAssigneeFilter !== 'all') filtered = filtered.filter(t=>(t.assignee||'').toLowerCase() === taskAssigneeFilter.toLowerCase());
   if (taskSearch) { const q=taskSearch.toLowerCase(); filtered=filtered.filter(t=>t.text.toLowerCase().includes(q)||(t.assignee&&t.assignee.toLowerCase().includes(q))||(t.notes&&t.notes.toLowerCase().includes(q))); }
 
   document.getElementById('content-area').innerHTML = `
@@ -902,6 +904,10 @@ function renderTasksPage() {
         <option value="MS Teams / Read AI" ${taskSrcFilter==='MS Teams / Read AI'?'selected':''}>Read AI</option>
         <option value="Samsung Notes" ${taskSrcFilter==='Samsung Notes'?'selected':''}>Samsung Notes</option>
         <option value="Manual" ${taskSrcFilter==='Manual'?'selected':''}>Manual</option>
+      </select>
+      <select class="filter-select" onchange="taskAssigneeFilter=this.value;renderTasksPage()">
+        <option value="all">All people</option>
+        ${[...new Set(db.tasks.map(t=>t.assignee).filter(Boolean))].sort().map(a=>`<option value="${a}" ${taskAssigneeFilter===a?'selected':''}>${a}</option>`).join('')}
       </select>
     </div>
     ${filtered.length ? `<div class="task-list">${filtered.map(t=>taskCardHtml(t)).join('')}</div>` : '<div class="empty-state"><div class="empty-icon">✓</div><div>No tasks match your filters.</div></div>'}`;
