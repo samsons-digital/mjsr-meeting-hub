@@ -531,6 +531,7 @@ let taskDeptFilter = 'all';
 let taskSrcFilter = 'all';
 let taskAssigneeFilter = 'all';
 let taskSearch = '';
+let mtgSortOrder = 'newest';
 let editingTaskId = null;
 let ceoView = 'list';
 
@@ -981,12 +982,19 @@ function saveTaskModal() {
 
 /* ── MEETINGS ── */
 function renderMeetings() {
-  setTopbarActions(`<div class="search-wrap"><span class="search-icon"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5l3 3"/></svg></span><input type="text" class="form-input search-input" id="mtg-search" placeholder="Search meetings…" oninput="renderMeetingList(this.value)" style="width:200px;padding:6px 10px 6px 28px;font-size:12px;"></div>`);
+  setTopbarActions(`
+    <div style="display:flex;align-items:center;gap:8px;">
+      <div class="search-wrap"><span class="search-icon"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5l3 3"/></svg></span><input type="text" class="form-input search-input" id="mtg-search" placeholder="Search meetings…" oninput="renderMeetingList(this.value)" style="width:200px;padding:6px 10px 6px 28px;font-size:12px;"></div>
+      <div style="display:flex;background:var(--surface2);border-radius:999px;padding:3px;gap:2px;">
+        <button onclick="mtgSortOrder='newest';renderMeetingList(document.getElementById('mtg-search')?.value||'')" style="padding:4px 12px;font-size:12px;border:none;border-radius:999px;cursor:pointer;background:${mtgSortOrder==='newest'?'var(--surface)':'transparent'};color:${mtgSortOrder==='newest'?'var(--text)':'var(--text3)'};font-family:inherit;font-weight:${mtgSortOrder==='newest'?'500':'400'};">Newest</button>
+        <button onclick="mtgSortOrder='oldest';renderMeetingList(document.getElementById('mtg-search')?.value||'')" style="padding:4px 12px;font-size:12px;border:none;border-radius:999px;cursor:pointer;background:${mtgSortOrder==='oldest'?'var(--surface)':'transparent'};color:${mtgSortOrder==='oldest'?'var(--text)':'var(--text3)'};font-family:inherit;font-weight:${mtgSortOrder==='oldest'?'500':'400'};">Oldest</button>
+      </div>
+    </div>`);
   document.getElementById('content-area').innerHTML = `<div id="meeting-list-wrap"></div>`;
   renderMeetingList('');
 }
 function renderMeetingList(q) {
-  const meetings = [...db.meetings].sort((a,b)=>b.date.localeCompare(a.date))
+  const meetings = [...db.meetings].sort((a,b)=> mtgSortOrder==='oldest' ? new Date(a.date)-new Date(b.date) : new Date(b.date)-new Date(a.date))
     .filter(m=>!q||m.title.toLowerCase().includes(q.toLowerCase())||m.summary.toLowerCase().includes(q.toLowerCase()));
   const wrap = document.getElementById('meeting-list-wrap');
   if (!wrap) return;
