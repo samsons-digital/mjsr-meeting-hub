@@ -559,15 +559,12 @@ function setSyncStatus(s, detail) {
 
 // Write to localStorage immediately, then push to Sheets in background
 let _syncFailCount = 0;
-let _syncDebounceTimer = null;
 
 function saveDB(skipRemote) {
   try { localStorage.setItem('mjsr_hub_db', JSON.stringify(db)); } catch(e){}
   if (!skipRemote && SCRIPT_URL) {
-    // Debounce: wait 1.5s after last save before pushing — prevents rapid-fire syncs
-    clearTimeout(_syncDebounceTimer);
     setSyncStatus('syncing');
-    _syncDebounceTimer = setTimeout(() => pushToSheets(), 1500);
+    pushToSheets();
   }
 }
 
@@ -592,14 +589,7 @@ async function pushToSheets(action, payload) {
   } catch(err) {
     _syncFailCount++;
     console.warn('Sheets sync error:', err.message);
-    // Only show red dot after 2 consecutive failures — ignore single timeouts
-    if (_syncFailCount >= 2) {
-      setSyncStatus('error', 'Sync failed — data saved locally');
-    } else {
-      setSyncStatus('local', `${db.tasks.length} tasks · ${db.meetings.length} meetings · retrying…`);
-      // Retry once after 5s
-      setTimeout(() => pushToSheets(action, payload), 5000);
-    }
+    setSyncStatus('local', db.tasks.length + ' tasks · ' + db.meetings.length + ' meetings · Sheets offline');
   }
 }
 
@@ -942,7 +932,13 @@ function renderTasksPage() {
 function setTFilter(f) { taskFilter=f; renderTasksPage(); }
 function qToggle(id,checked) {
   const t=db.tasks.find(t=>t.id===id);
-  if(t){ t.status=checked?'complete':'pending'; saveDB(); patchTaskCard(id); updateMeetingBadge(t.meetingId); }
+  if(t){
+    t.status=checked?'complete':'pending';
+    try { localStorage.setItem('mjsr_hub_db', JSON.stringify(db)); } catch(e){}
+    patchTaskCard(id);
+    updateMeetingBadge(t.meetingId);
+    syncTask(t);
+  }
 }
 
 function toggleTaskExpand(id) {
@@ -952,11 +948,11 @@ function toggleTaskExpand(id) {
 
 function qChangeStatus(id,val) {
   const t=db.tasks.find(t=>t.id===id);
-  if(t){ t.status=val; saveDB(); patchTaskCard(id); updateMeetingBadge(t.meetingId); }
+  if(t){ t.status=val; try{localStorage.setItem('mjsr_hub_db',JSON.stringify(db));}catch(e){} patchTaskCard(id); updateMeetingBadge(t.meetingId); syncTask(t); }
 }
 function qChangeDept(id,val) {
   const t=db.tasks.find(t=>t.id===id);
-  if(t){ t.dept=val; saveDB(); patchTaskCard(id); }
+  if(t){ t.dept=val; try{localStorage.setItem('mjsr_hub_db',JSON.stringify(db));}catch(e){} patchTaskCard(id); syncTask(t); }
 }
 function deleteTask(id) {
   if(!confirm('Remove this task?'))return;
@@ -974,7 +970,37 @@ function toggleNoteEdit(id) { const el=document.getElementById('note-edit-'+id);
 function saveNote(id) {
   const t=db.tasks.find(t=>t.id===id);
   const el=document.getElementById('note-input-'+id);
-  if(t&&el){ t.notes=el.value.trim(); saveDB(); patchTaskCard(id); }
+  if(t&&el){ t.notes=el.value.trim(); try{localStorage.setItem('mjsr_hub_db',JSON.stringify(db));}catch(e){} patchTaskCard(id); syncTask(t); }
+}
+
+// Push only a single task to Sheets — much lighter than syncAll
+async function syncTask(t) {
+  if (!SCRIPT_URL) return;
+  setSyncStatus('syncing');
+  try {
+    const resp = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: 'updateTask', data: t })
+    });
+    const result = await resp.json();
+    if (result.error) throw new Error(result.error);
+    setSyncStatus('synced');
+  } catch(err) {
+    // Fall back to full sync once if individual update fails
+    console.warn('Single task sync failed, trying full sync:', err.message);
+    try {
+      const resp2 = await fetch(SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ action: 'syncAll', data: db })
+      });
+      const result2 = await resp2.json();
+      if (!result2.error) { setSyncStatus('synced'); return; }
+    } catch(e2) {}
+    setSyncStatus('local', db.tasks.length + ' tasks · saved locally');
+    console.warn('Sync failed, data safe in localStorage');
+  }
 }
 
 function patchTaskCard(id) {
