@@ -558,28 +558,48 @@ function setSyncStatus(s, detail) {
 }
 
 // Write to localStorage immediately, then push to Sheets in background
+let _syncFailCount = 0;
+let _syncDebounceTimer = null;
+
 function saveDB(skipRemote) {
   try { localStorage.setItem('mjsr_hub_db', JSON.stringify(db)); } catch(e){}
-  setSyncStatus(SCRIPT_URL ? 'syncing' : 'local');
-  if (!skipRemote && SCRIPT_URL) pushToSheets();
+  if (!skipRemote && SCRIPT_URL) {
+    // Debounce: wait 1.5s after last save before pushing — prevents rapid-fire syncs
+    clearTimeout(_syncDebounceTimer);
+    setSyncStatus('syncing');
+    _syncDebounceTimer = setTimeout(() => pushToSheets(), 1500);
+  }
 }
 
 async function pushToSheets(action, payload) {
   if (!SCRIPT_URL) return;
   try {
     const body = payload || { action:'syncAll', data: db };
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000); // 15s timeout
     const resp = await fetch(SCRIPT_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
+      signal: controller.signal
     });
+    clearTimeout(timeout);
     const result = await resp.json();
     if (result.error) throw new Error(result.error);
+    _syncFailCount = 0;
     setSyncStatus('synced');
     return result;
   } catch(err) {
-    setSyncStatus('error', 'Sync failed — data saved locally');
+    _syncFailCount++;
     console.warn('Sheets sync error:', err.message);
+    // Only show red dot after 2 consecutive failures — ignore single timeouts
+    if (_syncFailCount >= 2) {
+      setSyncStatus('error', 'Sync failed — data saved locally');
+    } else {
+      setSyncStatus('local', `${db.tasks.length} tasks · ${db.meetings.length} meetings · retrying…`);
+      // Retry once after 5s
+      setTimeout(() => pushToSheets(action, payload), 5000);
+    }
   }
 }
 
@@ -616,7 +636,9 @@ async function loadDB() {
         if (missingTasks.length)  pushToSheets(null,{action:'bulkSaveTasks',tasks:missingTasks});
       }
     } catch(err) {
-      setSyncStatus('error', 'Sheets unavailable — using local data');
+      // On page load, don't show red — just stay on local silently
+      setSyncStatus('local');
+      console.warn('Initial Sheets load failed, using local data:', err.message);
     }
   }
 }
