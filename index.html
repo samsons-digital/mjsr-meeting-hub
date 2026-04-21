@@ -537,7 +537,7 @@ let ceoView = 'list';
 
 /* ── STORAGE: Google Sheets + localStorage hybrid ── */
 // Set your deployed Apps Script URL here after deployment:
-let SCRIPT_URL = localStorage.getItem('mjsr_script_url') || '';
+let SCRIPT_URL = localStorage.getItem('mjsr_script_url') || 'https://script.google.com/macros/s/AKfycbzbGb8o5OpWm-eBGbVOyFx4fG4BJx1YJmc8khTZsCYuH4kfo8Bb6azZfEyV4mXcTDyjWA/exec';
 let syncStatus = 'local'; // 'local' | 'syncing' | 'synced' | 'error'
 let pendingSync = false;
 
