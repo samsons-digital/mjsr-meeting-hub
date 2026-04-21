@@ -918,17 +918,69 @@ function renderTasksPage() {
 }
 
 function setTFilter(f) { taskFilter=f; renderTasksPage(); }
-function qToggle(id,checked) { const t=db.tasks.find(t=>t.id===id);if(t){t.status=checked?'complete':'pending';saveDB();renderCurrentPage();}}
+function qToggle(id,checked) {
+  const t=db.tasks.find(t=>t.id===id);
+  if(t){ t.status=checked?'complete':'pending'; saveDB(); patchTaskCard(id); updateMeetingBadge(t.meetingId); }
+}
 
 function toggleTaskExpand(id) {
   const card = document.getElementById('tc-'+id);
   if (card) card.classList.toggle('expanded');
 }
-function qChangeStatus(id,val) { const t=db.tasks.find(t=>t.id===id);if(t){t.status=val;saveDB();renderCurrentPage();}}
-function qChangeDept(id,val) { const t=db.tasks.find(t=>t.id===id);if(t){t.dept=val;saveDB();renderCurrentPage();}}
-function deleteTask(id) { if(!confirm('Remove this task?'))return; db.tasks=db.tasks.filter(t=>t.id!==id);saveDB();renderCurrentPage();}
+
+function qChangeStatus(id,val) {
+  const t=db.tasks.find(t=>t.id===id);
+  if(t){ t.status=val; saveDB(); patchTaskCard(id); updateMeetingBadge(t.meetingId); }
+}
+function qChangeDept(id,val) {
+  const t=db.tasks.find(t=>t.id===id);
+  if(t){ t.dept=val; saveDB(); patchTaskCard(id); }
+}
+function deleteTask(id) {
+  if(!confirm('Remove this task?'))return;
+  const t=db.tasks.find(t=>t.id===id);
+  const mtgId=t?t.meetingId:null;
+  db.tasks=db.tasks.filter(t=>t.id!==id);
+  saveDB();
+  const card=document.getElementById('tc-'+id);
+  if(card) card.remove();
+  if(mtgId) updateMeetingBadge(mtgId);
+  const pg=document.getElementById('page-title').textContent;
+  if(pg==='Dashboard'||pg==='Tasks') renderCurrentPage();
+}
 function toggleNoteEdit(id) { const el=document.getElementById('note-edit-'+id);if(el)el.style.display=el.style.display==='none'?'block':'none'; }
-function saveNote(id) { const t=db.tasks.find(t=>t.id===id);const el=document.getElementById('note-input-'+id);if(t&&el){t.notes=el.value.trim();saveDB();renderCurrentPage();}}
+function saveNote(id) {
+  const t=db.tasks.find(t=>t.id===id);
+  const el=document.getElementById('note-input-'+id);
+  if(t&&el){ t.notes=el.value.trim(); saveDB(); patchTaskCard(id); }
+}
+
+function patchTaskCard(id) {
+  const t=db.tasks.find(t=>t.id===id);
+  const card=document.getElementById('tc-'+id);
+  if(!t||!card){ renderCurrentPage(); return; }
+  const wasExpanded=card.classList.contains('expanded');
+  const minimal=!!card.closest('.meeting-card-body');
+  card.outerHTML=taskCardHtml(t,minimal);
+  const newCard=document.getElementById('tc-'+id);
+  if(newCard&&wasExpanded) newCard.classList.add('expanded');
+}
+
+function updateMeetingBadge(meetingId) {
+  if(!meetingId) return;
+  const mt=db.tasks.filter(t=>t.meetingId===meetingId);
+  const done=mt.filter(t=>t.status==='complete').length;
+  const pending=mt.filter(t=>t.status!=='complete').length;
+  const card=document.getElementById('mc-'+meetingId);
+  if(!card) return;
+  const badgeWrap=card.querySelector('.mtg-task-summary');
+  if(!badgeWrap) return;
+  if(mt.length===0){badgeWrap.innerHTML='';return;}
+  badgeWrap.innerHTML=pending>0
+    ?`<span class="mtg-pending-badge">${pending} remaining &nbsp;·&nbsp; ${done}/${mt.length} done</span>`
+    :`<span class="mtg-complete-badge">All ${mt.length} complete</span>`;
+}
+
 function renderCurrentPage() { const a=document.getElementById('page-title').textContent;const map={'Dashboard':renderDashboard,'Tasks':renderTasksPage,'Meeting log':renderMeetings,'CEO / Finance view':renderCEO};if(map[a])map[a](); }
 
 /* ── ADD/EDIT TASK MODAL ── */
